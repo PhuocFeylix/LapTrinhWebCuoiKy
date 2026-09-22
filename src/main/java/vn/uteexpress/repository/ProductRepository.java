@@ -10,15 +10,19 @@ import vn.uteexpress.entity.Product;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-	List<Product> findByNameContainingIgnoreCase(String keyword);
+    List<Product> findByNameContainingIgnoreCase(String keyword);
 
-	List<Product> findByCategoryId(Long categoryId);
+    List<Product> findByCategoryId(Long categoryId);
 
-	List<Product> findByActiveTrue();
+    List<Product> findByActiveTrue();
 
-	Page<Product> findByActiveTrue(Pageable pageable);
+    Page<Product> findByActiveTrue(Pageable pageable);
 
-	Page<Product> findByNameContainingIgnoreCase(String keyword, Pageable pageable);
+    Page<Product> findByNameContainingIgnoreCase(String keyword, Pageable pageable);
 
-	Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+    Page<Product> findByCategoryId(Long categoryId, Pageable pageable);
+
+    Page<Product> findByShopId(Long shopId, Pageable pageable);
+
+    List<Product> findByShopId(Long shopId);
 }
