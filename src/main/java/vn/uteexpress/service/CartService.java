@@ -22,11 +22,10 @@ public class CartService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
 
-    public CartService(
-            CartRepository cartRepository,
-            CartItemRepository cartItemRepository,
-            ProductRepository productRepository,
-            UserRepository userRepository) {
+    public CartService(CartRepository cartRepository,
+                       CartItemRepository cartItemRepository,
+                       ProductRepository productRepository,
+                       UserRepository userRepository) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
         this.productRepository = productRepository;
@@ -35,10 +34,8 @@ public class CartService {
 
     @Transactional
     public Cart getOrCreateCart(Long userId) {
-        return cartRepository.findByUserId(userId).orElseGet(() -> {
-            User user = findUser(userId);
-            return cartRepository.save(new Cart(user));
-        });
+        return cartRepository.findByUserId(userId).orElseGet(() ->
+                cartRepository.save(new Cart(findUser(userId))));
     }
 
     public Cart getCart(Long userId) {
@@ -53,6 +50,7 @@ public class CartService {
 
         Cart cart = getOrCreateCart(userId);
         Product product = findProduct(productId);
+
         validateProduct(product);
 
         CartItem item = cartItemRepository
@@ -61,13 +59,11 @@ public class CartService {
                     CartItem newItem = new CartItem();
                     newItem.setCart(cart);
                     newItem.setProduct(product);
+                    newItem.setQuantity(0);
                     return newItem;
                 });
 
-        int newQuantity = item.getId() == null
-                ? quantity
-                : item.getQuantity() + quantity;
-
+        int newQuantity = item.getQuantity() + quantity;
         validateQuantity(newQuantity, product);
 
         item.setQuantity(newQuantity);
@@ -86,11 +82,10 @@ public class CartService {
         }
 
         Cart cart = getCart(userId);
-
         CartItem item = cartItemRepository
                 .findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() ->
-                        new RuntimeException("Sản phẩm không có trong giỏ hàng"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Sản phẩm không có trong giỏ hàng"));
 
         Product product = findProduct(productId);
         validateProduct(product);
@@ -111,10 +106,11 @@ public class CartService {
 
         CartItem item = cartItemRepository
                 .findByCartIdAndProductId(cart.getId(), productId)
-                .orElseThrow(() ->
-                        new RuntimeException("Sản phẩm không có trong giỏ hàng"));
+                .orElseThrow(() -> new RuntimeException(
+                        "Sản phẩm không có trong giỏ hàng"));
 
         cartItemRepository.delete(item);
+        cart.getItems().remove(item);
         recalculateTotal(cart);
 
         return cartRepository.save(cart);
@@ -125,32 +121,33 @@ public class CartService {
         Cart cart = getCart(userId);
         cart.getItems().clear();
         cart.setTotalAmount(BigDecimal.ZERO);
-
         return cartRepository.save(cart);
     }
 
     private User findUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy người dùng với ID: " + userId));
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy người dùng với ID: " + userId));
     }
 
     private Product findProduct(Long productId) {
         return productRepository.findById(productId)
-                .orElseThrow(() ->
-                        new RuntimeException("Không tìm thấy sản phẩm với ID: " + productId));
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy sản phẩm với ID: " + productId));
     }
 
     private void validateProduct(Product product) {
         if (!product.isActive()) {
-            throw new IllegalArgumentException("Sản phẩm đang ngừng kinh doanh");
+            throw new IllegalArgumentException(
+                    "Sản phẩm đang ngừng kinh doanh");
         }
     }
 
     private void validateQuantity(int quantity, Product product) {
         if (quantity > product.getStock()) {
             throw new IllegalArgumentException(
-                    "Số lượng vượt quá tồn kho. Tồn kho hiện tại: " + product.getStock());
+                    "Số lượng vượt quá tồn kho. Tồn kho hiện tại: "
+                    + product.getStock());
         }
     }
 

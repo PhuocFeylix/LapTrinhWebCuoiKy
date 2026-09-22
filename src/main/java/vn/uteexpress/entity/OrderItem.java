@@ -5,9 +5,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "cart_items",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"cart_id", "product_id"}))
-public class CartItem {
+@Table(name = "order_items")
+public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,42 +14,45 @@ public class CartItem {
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "cart_id", nullable = false)
-    private Cart cart;
+    @JoinColumn(name = "order_id", nullable = false)
+    private Order order;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(nullable = false)
-    private int quantity;
+    @Column(nullable = false, length = 150)
+    private String productName;
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal unitPrice;
 
-    public CartItem() {}
+    @Column(nullable = false)
+    private int quantity;
 
-    public CartItem(Cart cart, Product product, int quantity) {
-        this.cart = cart;
-        this.product = product;
-        this.quantity = quantity;
-        this.unitPrice = BigDecimal.valueOf(product.getPrice());
-    }
+    public OrderItem() {}
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public Cart getCart() { return cart; }
-    public void setCart(Cart cart) { this.cart = cart; }
+    public Order getOrder() { return order; }
+    public void setOrder(Order order) { this.order = order; }
 
     public Product getProduct() { return product; }
     public void setProduct(Product product) { this.product = product; }
 
-    public int getQuantity() { return quantity; }
-    public void setQuantity(int quantity) { this.quantity = quantity; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
 
     public BigDecimal getUnitPrice() { return unitPrice; }
-    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
+    public void setUnitPrice(BigDecimal unitPrice) {
+        this.unitPrice = unitPrice;
+    }
+
+    public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
 
     public BigDecimal getSubtotal() {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));

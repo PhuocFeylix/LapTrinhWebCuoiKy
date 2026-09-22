@@ -27,7 +27,6 @@ public class Cart {
 
     public Cart(User user) {
         this.user = user;
-        this.totalAmount = BigDecimal.ZERO;
     }
 
     public Long getId() { return id; }
