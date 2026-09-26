@@ -2,7 +2,6 @@ package vn.uteexpress.controller;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,50 +15,76 @@ public class AddressController {
 	private final AddressService addressService;
 
 	public AddressController(AddressService addressService) {
+
 		this.addressService = addressService;
 	}
 
+	// =========================
+	// GET ALL
+	// =========================
+
 	@GetMapping("/user/{userId}")
-	public ResponseEntity<List<Address>> getByUser(@PathVariable Long userId) {
+	public ResponseEntity<List<Address>> getUserAddresses(@PathVariable Long userId) {
 
-		return ResponseEntity.ok(addressService.findByUserId(userId));
+		return ResponseEntity.ok(addressService.getUserAddresses(userId));
 	}
 
-	@GetMapping("/{id}/user/{userId}")
-	public ResponseEntity<Address> getById(@PathVariable Long id, @PathVariable Long userId) {
+	// =========================
+	// GET ONE
+	// =========================
 
-		return ResponseEntity.ok(addressService.findByIdAndUser(id, userId));
+	@GetMapping("/{addressId}/user/{userId}")
+	public ResponseEntity<Address> getAddress(@PathVariable Long addressId, @PathVariable Long userId) {
+
+		return ResponseEntity.ok(addressService.getAddress(userId, addressId));
 	}
 
-	@GetMapping("/user/{userId}/default")
-	public ResponseEntity<Address> getDefault(@PathVariable Long userId) {
+	// =========================
+	// CREATE
+	// =========================
 
-		return ResponseEntity.ok(addressService.getDefault(userId));
+	@PostMapping("/user/{userId}")
+	public ResponseEntity<Address> createAddress(@PathVariable Long userId, @RequestParam String receiverName,
+			@RequestParam String phone, @RequestParam String address, @RequestParam(required = false) String ward,
+			@RequestParam(required = false) String district, @RequestParam String city,
+			@RequestParam(defaultValue = "false") boolean defaultAddress) {
+
+		return ResponseEntity.ok(addressService.createAddress(userId, receiverName, phone, address, ward, district,
+				city, defaultAddress));
 	}
 
-	@PostMapping
-	public ResponseEntity<Address> create(@RequestBody Address address, @RequestParam Long userId) {
+	// =========================
+	// UPDATE
+	// =========================
 
-		return ResponseEntity.status(HttpStatus.CREATED).body(addressService.create(address, userId));
+	@PutMapping("/{addressId}/user/{userId}")
+	public ResponseEntity<Address> updateAddress(@PathVariable Long addressId, @PathVariable Long userId,
+			@RequestParam String receiverName, @RequestParam String phone, @RequestParam String address,
+			@RequestParam(required = false) String ward, @RequestParam(required = false) String district,
+			@RequestParam String city, @RequestParam(defaultValue = "false") boolean defaultAddress) {
+
+		return ResponseEntity.ok(addressService.updateAddress(userId, addressId, receiverName, phone, address, ward,
+				district, city, defaultAddress));
 	}
 
-	@PutMapping("/{id}")
-	public ResponseEntity<Address> update(@PathVariable Long id, @RequestParam Long userId,
-			@RequestBody Address address) {
+	// =========================
+	// SET DEFAULT
+	// =========================
 
-		return ResponseEntity.ok(addressService.update(id, address, userId));
+	@PutMapping("/{addressId}/user/{userId}/default")
+	public ResponseEntity<Address> setDefaultAddress(@PathVariable Long addressId, @PathVariable Long userId) {
+
+		return ResponseEntity.ok(addressService.setDefaultAddress(userId, addressId));
 	}
 
-	@PutMapping("/{id}/default")
-	public ResponseEntity<Address> setDefault(@PathVariable Long id, @RequestParam Long userId) {
+	// =========================
+	// DELETE
+	// =========================
 
-		return ResponseEntity.ok(addressService.setDefault(id, userId));
-	}
+	@DeleteMapping("/{addressId}/user/{userId}")
+	public ResponseEntity<Void> deleteAddress(@PathVariable Long addressId, @PathVariable Long userId) {
 
-	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> delete(@PathVariable Long id, @RequestParam Long userId) {
-
-		addressService.delete(id, userId);
+		addressService.deleteAddress(userId, addressId);
 
 		return ResponseEntity.noContent().build();
 	}

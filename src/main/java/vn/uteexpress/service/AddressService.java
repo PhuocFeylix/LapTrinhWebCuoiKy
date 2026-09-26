@@ -3,6 +3,7 @@ package vn.uteexpress.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import vn.uteexpress.entity.Address;
 import vn.uteexpress.entity.User;
@@ -16,113 +17,169 @@ public class AddressService {
 	private final UserRepository userRepository;
 
 	public AddressService(AddressRepository addressRepository, UserRepository userRepository) {
+
 		this.addressRepository = addressRepository;
 		this.userRepository = userRepository;
 	}
 
-	public List<Address> findByUserId(Long userId) {
+	// =========================
+	// GET ALL USER ADDRESSES
+	// =========================
 
-		checkUserExists(userId);
+	public List<Address> getUserAddresses(Long userId) {
+
+		userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
 		return addressRepository.findByUserId(userId);
 	}
 
-	public Address findByIdAndUser(Long id, Long userId) {
+	// =========================
+	// GET ONE ADDRESS
+	// =========================
 
-		return addressRepository.findByIdAndUserId(id, userId)
+	public Address getAddress(Long userId, Long addressId) {
+
+		return addressRepository.findByIdAndUserId(addressId, userId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy địa chỉ"));
 	}
 
-	public Address create(Address address, Long userId) {
+	// =========================
+	// CREATE ADDRESS
+	// =========================
 
-		validateAddress(address);
+	@Transactional
+	public Address createAddress(Long userId, String receiverName, String phone, String address, String ward,
+			String district, String city, boolean defaultAddress) {
 
-		User user = getUser(userId);
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-		address.setUser(user);
+		validate(receiverName, phone, address, city);
 
-		/*
-		 * Nếu đây là địa chỉ đầu tiên thì tự động đặt làm mặc định.
-		 */
+		Address newAddress = new Address();
+
+		newAddress.setReceiverName(receiverName.trim());
+
+		newAddress.setPhone(phone.trim());
+
+		newAddress.setAddress(address.trim());
+
+		newAddress.setWard(ward == null ? null : ward.trim());
+
+		newAddress.setDistrict(district == null ? null : district.trim());
+
+		newAddress.setCity(city == null ? null : city.trim());
+
+		newAddress.setUser(user);
+
+		// Nếu là địa chỉ đầu tiên
+		// thì tự động đặt mặc định
 		List<Address> addresses = addressRepository.findByUserId(userId);
 
 		if (addresses.isEmpty()) {
-			address.setDefaultAddress(true);
+			newAddress.setDefaultAddress(true);
+
+		} else if (defaultAddress) {
+
+			clearDefaultAddress(userId);
+
+			newAddress.setDefaultAddress(true);
+
+		} else {
+
+			newAddress.setDefaultAddress(false);
 		}
 
-		/*
-		 * Nếu người dùng chọn địa chỉ mới làm mặc định thì bỏ mặc định cũ.
-		 */
-		if (address.isDefaultAddress()) {
-			removeDefaultAddress(userId);
-		}
-
-		return addressRepository.save(address);
+		return addressRepository.save(newAddress);
 	}
 
-	public Address update(Long id, Address address, Long userId) {
+	// =========================
+	// UPDATE ADDRESS
+	// =========================
 
-		Address existing = findByIdAndUser(id, userId);
+	@Transactional
+	public Address updateAddress(Long userId, Long addressId, String receiverName, String phone, String address,
+			String ward, String district, String city, boolean defaultAddress) {
 
-		validateAddress(address);
+		Address existing = getAddress(userId, addressId);
 
-		existing.setReceiverName(address.getReceiverName().trim());
+		validate(receiverName, phone, address, city);
 
-		existing.setPhone(address.getPhone().trim());
+		existing.setReceiverName(receiverName.trim());
 
-		existing.setAddress(address.getAddress().trim());
+		existing.setPhone(phone.trim());
 
-		existing.setWard(address.getWard());
+		existing.setAddress(address.trim());
 
-		existing.setDistrict(address.getDistrict());
+		existing.setWard(ward == null ? null : ward.trim());
 
-		existing.setCity(address.getCity());
+		existing.setDistrict(district == null ? null : district.trim());
 
-		if (address.isDefaultAddress()) {
-			removeDefaultAddress(userId);
+		existing.setCity(city == null ? null : city.trim());
+
+		if (defaultAddress) {
+
+			clearDefaultAddress(userId);
+
+			existing.setDefaultAddress(true);
+
 		}
-
-		existing.setDefaultAddress(address.isDefaultAddress());
 
 		return addressRepository.save(existing);
 	}
 
-	public void delete(Long id, Long userId) {
+	// =========================
+	// SET DEFAULT
+	// =========================
 
-		Address address = findByIdAndUser(id, userId);
+	@Transactional
+	public Address setDefaultAddress(Long userId, Long addressId) {
 
-		addressRepository.delete(address);
-	}
+		Address address = getAddress(userId, addressId);
 
-	public Address setDefault(Long id, Long userId) {
-
-		Address address = findByIdAndUser(id, userId);
-
-		removeDefaultAddress(userId);
+		clearDefaultAddress(userId);
 
 		address.setDefaultAddress(true);
 
 		return addressRepository.save(address);
 	}
 
-	public Address getDefault(Long userId) {
+	// =========================
+	// DELETE ADDRESS
+	// =========================
 
-		return addressRepository.findByUserIdAndDefaultAddressTrue(userId)
-				.orElseThrow(() -> new RuntimeException("User chưa có địa chỉ mặc định"));
+	@Transactional
+	public void deleteAddress(Long userId, Long addressId) {
+
+		Address address = getAddress(userId, addressId);
+
+		boolean wasDefault = address.isDefaultAddress();
+
+		addressRepository.delete(address);
+
+		/*
+		 * Nếu xóa địa chỉ mặc định, chọn một địa chỉ khác làm mặc định.
+		 */
+		if (wasDefault) {
+
+			List<Address> addresses = addressRepository.findByUserId(userId);
+
+			if (!addresses.isEmpty()) {
+
+				Address newDefault = addresses.get(0);
+
+				newDefault.setDefaultAddress(true);
+
+				addressRepository.save(newDefault);
+			}
+		}
 	}
 
-	private User getUser(Long userId) {
+	// =========================
+	// CLEAR DEFAULT
+	// =========================
 
-		return userRepository.findById(userId)
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy user với ID: " + userId));
-	}
-
-	private void checkUserExists(Long userId) {
-
-		getUser(userId);
-	}
-
-	private void removeDefaultAddress(Long userId) {
+	private void clearDefaultAddress(Long userId) {
 
 		addressRepository.findByUserIdAndDefaultAddressTrue(userId).ifPresent(address -> {
 
@@ -132,21 +189,30 @@ public class AddressService {
 		});
 	}
 
-	private void validateAddress(Address address) {
+	// =========================
+	// VALIDATE
+	// =========================
 
-		if (address.getReceiverName() == null || address.getReceiverName().trim().isEmpty()) {
+	private void validate(String receiverName, String phone, String address, String city) {
+
+		if (receiverName == null || receiverName.trim().isEmpty()) {
 
 			throw new IllegalArgumentException("Tên người nhận không được để trống");
 		}
 
-		if (address.getPhone() == null || address.getPhone().trim().isEmpty()) {
+		if (phone == null || phone.trim().isEmpty()) {
 
 			throw new IllegalArgumentException("Số điện thoại không được để trống");
 		}
 
-		if (address.getAddress() == null || address.getAddress().trim().isEmpty()) {
+		if (address == null || address.trim().isEmpty()) {
 
 			throw new IllegalArgumentException("Địa chỉ không được để trống");
+		}
+
+		if (city == null || city.trim().isEmpty()) {
+
+			throw new IllegalArgumentException("Thành phố không được để trống");
 		}
 	}
 }
