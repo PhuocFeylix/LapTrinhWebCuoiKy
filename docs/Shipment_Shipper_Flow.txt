@@ -1,0 +1,20 @@
+SHIPMENT / SHIPPER
+
+Luồng:
+Order -> Shipment READY -> ASSIGNED -> PICKED_UP -> DELIVERING -> DELIVERED
+
+Khi PICKED_UP hoặc DELIVERING: Order = SHIPPING.
+Khi DELIVERED: Order = DELIVERED.
+User có role SHIPPER được dùng trực tiếp làm shipper.
+
+API:
+POST /api/shipments/order/{orderId}
+PUT  /api/shipments/{shipmentId}/assign/{shipperId}
+PUT  /api/shipments/{shipmentId}/status?status=PICKED_UP
+GET  /api/shipments/{shipmentId}
+GET  /api/shipments/order/{orderId}
+GET  /api/shipments/tracking/{trackingCode}
+GET  /api/shipments/shipper/{shipperId}
+GET  /api/shipments/unassigned
+
+JWT/Authentication và WebSocket sẽ tích hợp sau với phần của Nguyễn Minh Duy.
