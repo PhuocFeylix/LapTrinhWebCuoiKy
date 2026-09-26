@@ -62,4 +62,28 @@ public class ShopController {
 
 		return ResponseEntity.noContent().build();
 	}
+
+	// =========================
+	// REGISTER SHOP
+	// =========================
+
+	@PostMapping("/vendor/{vendorId}")
+	public ResponseEntity<Shop> registerShop(@PathVariable Long vendorId, @RequestParam String name,
+			@RequestParam(required = false) String description, @RequestParam String address,
+			@RequestParam String phone, @RequestParam(required = false) String logo) {
+
+		return ResponseEntity.ok(shopService.registerShop(vendorId, name, description, address, phone, logo));
+	}
+
+	// =========================
+	// UPDATE SHOP
+	// =========================
+
+	@PutMapping("/{shopId}/vendor/{vendorId}")
+	public ResponseEntity<Shop> updateShop(@PathVariable Long shopId, @PathVariable Long vendorId,
+			@RequestParam String name, @RequestParam(required = false) String description, @RequestParam String address,
+			@RequestParam String phone, @RequestParam(required = false) String logo) {
+
+		return ResponseEntity.ok(shopService.updateShop(vendorId, shopId, name, description, address, phone, logo));
+	}
 }

@@ -23,4 +23,27 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 			""")
 	boolean existsDeliveredOrderForProduct(@Param("userId") Long userId, @Param("productId") Long productId,
 			@Param("status") OrderStatus status);
+
+	@Query("""
+			    SELECT DISTINCT o
+			    FROM Order o
+			    JOIN o.items oi
+			    JOIN oi.product p
+			    JOIN p.shop s
+			    WHERE s.vendor.id = :vendorId
+			    ORDER BY o.createdAt DESC
+			""")
+	List<Order> findOrdersByVendorId(@Param("vendorId") Long vendorId);
+
+	@Query("""
+			    SELECT DISTINCT o
+			    FROM Order o
+			    JOIN o.items oi
+			    JOIN oi.product p
+			    JOIN p.shop s
+			    WHERE s.vendor.id = :vendorId
+			    AND o.status = :status
+			    ORDER BY o.createdAt DESC
+			""")
+	List<Order> findOrdersByVendorIdAndStatus(@Param("vendorId") Long vendorId, @Param("status") OrderStatus status);
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import vn.uteexpress.entity.Shop;
 import vn.uteexpress.entity.User;
 import vn.uteexpress.repository.ShopRepository;
@@ -99,5 +100,99 @@ public class ShopService {
 		}
 
 		return shopRepository.findByNameContainingIgnoreCase(keyword.trim());
+	}
+	// =========================
+	// GET SHOP BY VENDOR
+	// =========================
+
+	public Shop getShopByVendor(Long vendorId) {
+
+		return shopRepository.findByVendorId(vendorId).orElseThrow(() -> new RuntimeException("Vendor chưa có shop"));
+	}
+
+	// =========================
+	// REGISTER SHOP
+	// =========================
+
+	@Transactional
+	public Shop registerShop(Long vendorId, String name, String description, String address, String phone,
+			String logo) {
+
+		User vendor = userRepository.findById(vendorId)
+				.orElseThrow(() -> new RuntimeException("Không tìm thấy Vendor"));
+
+		if (shopRepository.existsByVendorId(vendorId)) {
+			throw new IllegalArgumentException("Vendor đã có shop");
+		}
+
+		validateShop(name, address, phone);
+
+		Shop shop = new Shop();
+
+		shop.setName(name.trim());
+
+		shop.setDescription(description == null ? null : description.trim());
+
+		shop.setAddress(address.trim());
+
+		shop.setPhone(phone.trim());
+
+		shop.setLogo(logo == null ? null : logo.trim());
+
+		shop.setActive(true);
+
+		shop.setVendor(vendor);
+
+		return shopRepository.save(shop);
+	}
+
+	// =========================
+	// UPDATE SHOP
+	// =========================
+
+	@Transactional
+	public Shop updateShop(Long vendorId, Long shopId, String name, String description, String address, String phone,
+			String logo) {
+
+		Shop shop = shopRepository.findByIdAndVendorId(shopId, vendorId)
+				.orElseThrow(() -> new RuntimeException("Không tìm thấy shop hoặc shop không thuộc Vendor"));
+
+		validateShop(name, address, phone);
+
+		shop.setName(name.trim());
+
+		shop.setDescription(description == null ? null : description.trim());
+
+		shop.setAddress(address.trim());
+
+		shop.setPhone(phone.trim());
+
+		if (logo != null) {
+			shop.setLogo(logo.trim());
+		}
+
+		return shopRepository.save(shop);
+	}
+
+	// =========================
+	// VALIDATE
+	// =========================
+
+	private void validateShop(String name, String address, String phone) {
+
+		if (name == null || name.trim().isEmpty()) {
+
+			throw new IllegalArgumentException("Tên shop không được để trống");
+		}
+
+		if (address == null || address.trim().isEmpty()) {
+
+			throw new IllegalArgumentException("Địa chỉ shop không được để trống");
+		}
+
+		if (phone == null || phone.trim().isEmpty()) {
+
+			throw new IllegalArgumentException("Số điện thoại shop không được để trống");
+		}
 	}
 }

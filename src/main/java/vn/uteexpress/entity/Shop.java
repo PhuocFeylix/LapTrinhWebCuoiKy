@@ -1,5 +1,8 @@
 package vn.uteexpress.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -31,6 +34,8 @@ public class Shop {
 	@OneToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "vendor_id", nullable = false, unique = true)
 	private User vendor;
+	@OneToMany(mappedBy = "shop")
+	private List<ShopOrder> shopOrders = new ArrayList<>();
 
 	public Shop() {
 	}
@@ -108,5 +113,13 @@ public class Shop {
 
 	public void setVendor(User vendor) {
 		this.vendor = vendor;
+	}
+
+	public List<ShopOrder> getShopOrders() {
+		return shopOrders;
+	}
+
+	public void setShopOrders(List<ShopOrder> shopOrders) {
+		this.shopOrders = shopOrders;
 	}
 }

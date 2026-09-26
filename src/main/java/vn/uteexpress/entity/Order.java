@@ -39,6 +39,8 @@ public class Order {
 
 	@Column(length = 50)
 	private String couponCode;
+	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<ShopOrder> shopOrders = new ArrayList<>();
 
 	public Order() {
 	}
@@ -114,5 +116,13 @@ public class Order {
 
 	public void setCouponCode(String couponCode) {
 		this.couponCode = couponCode;
+	}
+
+	public List<ShopOrder> getShopOrders() {
+		return shopOrders;
+	}
+
+	public void setShopOrders(List<ShopOrder> shopOrders) {
+		this.shopOrders = shopOrders;
 	}
 }
