@@ -9,11 +9,14 @@ import vn.uteexpress.entity.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    Optional<Category> findByName(String name);
+	Optional<Category> findByName(String name);
 
-    boolean existsByName(String name);
+	boolean existsByName(String name);
 
-    List<Category> findByActiveTrue();
+	List<Category> findByActiveTrue();
 
-    List<Category> findByNameContainingIgnoreCase(String keyword);
+	List<Category> findByNameContainingIgnoreCase(String keyword);
+
+	// Tìm Category theo tên nhưng chỉ lấy Category đang active
+	List<Category> findByNameContainingIgnoreCaseAndActiveTrue(String keyword);
 }

@@ -1,134 +1,147 @@
 package vn.uteexpress.controller;
 
-import vn.uteexpress.entity.Coupon;
-import vn.uteexpress.service.CouponService;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import vn.uteexpress.entity.Coupon;
+import vn.uteexpress.entity.User;
+import vn.uteexpress.repository.UserRepository;
+import vn.uteexpress.service.CouponService;
 
 @RestController
 @RequestMapping("/api/coupons")
 public class CouponController {
 
-    private final CouponService couponService;
+	private final CouponService couponService;
+	private final UserRepository userRepository;
 
-    public CouponController(CouponService couponService) {
-        this.couponService = couponService;
-    }
+	public CouponController(CouponService couponService, UserRepository userRepository) {
 
-    // =========================
-    // CREATE
-    // =========================
+		this.couponService = couponService;
+		this.userRepository = userRepository;
+	}
 
-    @PostMapping("/shop/{shopId}")
-    public ResponseEntity<Coupon> createCoupon(
-            @PathVariable Long shopId,
-            @RequestBody Coupon coupon) {
+	// =========================
+	// CREATE
+	// =========================
 
-        return ResponseEntity.ok(
-                couponService.createCoupon(
-                        coupon,
-                        shopId));
-    }
+	@PostMapping("/shop/{shopId}")
+	public ResponseEntity<Coupon> createCoupon(@PathVariable Long shopId, @RequestBody Coupon coupon,
+			Authentication authentication) {
 
-    // =========================
-    // UPDATE
-    // =========================
+		User currentUser = getCurrentUser(authentication);
 
-    @PutMapping("/{couponId}/shop/{shopId}")
-    public ResponseEntity<Coupon> updateCoupon(
-            @PathVariable Long couponId,
-            @PathVariable Long shopId,
-            @RequestBody Coupon coupon) {
+		return ResponseEntity.ok(couponService.createCoupon(coupon, shopId, currentUser));
+	}
 
-        return ResponseEntity.ok(
-                couponService.updateCoupon(
-                        couponId,
-                        coupon,
-                        shopId));
-    }
+	// =========================
+	// UPDATE
+	// =========================
 
-    // =========================
-    // DELETE
-    // =========================
+	@PutMapping("/{couponId}/shop/{shopId}")
+	public ResponseEntity<Coupon> updateCoupon(@PathVariable Long couponId, @PathVariable Long shopId,
+			@RequestBody Coupon coupon, Authentication authentication) {
 
-    @DeleteMapping("/{couponId}/shop/{shopId}")
-    public ResponseEntity<Void> deleteCoupon(
-            @PathVariable Long couponId,
-            @PathVariable Long shopId) {
+		User currentUser = getCurrentUser(authentication);
 
-        couponService.deleteCoupon(
-                couponId,
-                shopId);
+		return ResponseEntity.ok(couponService.updateCoupon(couponId, coupon, shopId, currentUser));
+	}
 
-        return ResponseEntity.noContent().build();
-    }
+	// =========================
+	// DELETE
+	// =========================
 
-    // =========================
-    // GET
-    // =========================
+	@DeleteMapping("/{couponId}/shop/{shopId}")
+	public ResponseEntity<Void> deleteCoupon(@PathVariable Long couponId, @PathVariable Long shopId,
+			Authentication authentication) {
 
-    @GetMapping("/{couponId}")
-    public ResponseEntity<Coupon> getCoupon(
-            @PathVariable Long couponId) {
+		User currentUser = getCurrentUser(authentication);
 
-        return ResponseEntity.ok(
-                couponService.getCoupon(couponId));
-    }
+		couponService.deleteCoupon(couponId, shopId, currentUser);
 
-    @GetMapping("/code/{code}")
-    public ResponseEntity<Coupon> getCouponByCode(
-            @PathVariable String code) {
+		return ResponseEntity.noContent().build();
+	}
 
-        Coupon coupon =
-                couponService.getCouponByCode(code);
+	// =========================
+	// GET COUPON
+	// =========================
 
-        if (coupon == null) {
-            return ResponseEntity.notFound().build();
-        }
+	@GetMapping("/{couponId}")
+	public ResponseEntity<Coupon> getCoupon(@PathVariable Long couponId) {
 
-        return ResponseEntity.ok(coupon);
-    }
+		return ResponseEntity.ok(couponService.getCoupon(couponId));
+	}
 
-    @GetMapping("/shop/{shopId}")
-    public ResponseEntity<List<Coupon>> getCouponsByShop(
-            @PathVariable Long shopId) {
+	// =========================
+	// GET BY CODE
+	// =========================
 
-        return ResponseEntity.ok(
-                couponService.getCouponsByShop(shopId));
-    }
+	@GetMapping("/code/{code}")
+	public ResponseEntity<Coupon> getCouponByCode(@PathVariable String code) {
 
-    @GetMapping("/active")
-    public ResponseEntity<List<Coupon>> getActiveCoupons() {
+		Coupon coupon = couponService.getCouponByCode(code);
 
-        return ResponseEntity.ok(
-                couponService.getActiveCoupons());
-    }
+		if (coupon == null) {
+			return ResponseEntity.notFound().build();
+		}
 
-    // =========================
-    // CALCULATE COUPON
-    // =========================
+		return ResponseEntity.ok(coupon);
+	}
 
-    @GetMapping("/calculate")
-    public ResponseEntity<BigDecimal> calculateCoupon(
-            @RequestParam String code,
-            @RequestParam BigDecimal orderAmount) {
+	// =========================
+	// GET BY SHOP
+	// =========================
 
-        Coupon coupon =
-                couponService.getCouponByCode(code);
+	@GetMapping("/shop/{shopId}")
+	public ResponseEntity<List<Coupon>> getCouponsByShop(@PathVariable Long shopId) {
 
-        if (coupon == null) {
-            return ResponseEntity.notFound().build();
-        }
+		return ResponseEntity.ok(couponService.getCouponsByShop(shopId));
+	}
 
-        BigDecimal discount =
-                couponService.calculateDiscount(
-                        coupon,
-                        orderAmount);
+	// =========================
+	// GET ACTIVE
+	// =========================
 
-        return ResponseEntity.ok(discount);
-    }
+	@GetMapping("/active")
+	public ResponseEntity<List<Coupon>> getActiveCoupons() {
+
+		return ResponseEntity.ok(couponService.getActiveCoupons());
+	}
+
+	// =========================
+	// CALCULATE
+	// =========================
+
+	@GetMapping("/calculate")
+	public ResponseEntity<BigDecimal> calculateCoupon(@RequestParam String code, @RequestParam BigDecimal orderAmount) {
+
+		Coupon coupon = couponService.getCouponByCode(code);
+
+		if (coupon == null) {
+			return ResponseEntity.notFound().build();
+		}
+
+		BigDecimal discount = couponService.calculateDiscount(coupon, orderAmount);
+
+		return ResponseEntity.ok(discount);
+	}
+
+	// =========================
+	// CURRENT USER
+	// =========================
+
+	private User getCurrentUser(Authentication authentication) {
+
+		if (authentication == null || !authentication.isAuthenticated()) {
+
+			throw new IllegalArgumentException("Chưa đăng nhập");
+		}
+
+		return userRepository.findByUsername(authentication.getName())
+				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản"));
+	}
 }

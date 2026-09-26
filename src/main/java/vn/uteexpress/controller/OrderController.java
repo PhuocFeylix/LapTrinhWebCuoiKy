@@ -134,7 +134,9 @@ public class OrderController {
 			throw new IllegalArgumentException("Không được xem đơn hàng của người dùng khác");
 		}
 
-		return ResponseEntity.ok(orderService.getShopOrdersByUser(orderId, currentUser.getId()));
+		Long ownerId = isAdmin ? order.getUser().getId() : currentUser.getId();
+
+		return ResponseEntity.ok(orderService.getShopOrdersByUser(orderId, ownerId));
 	}
 	// =========================================================
 	// CANCEL ORDER

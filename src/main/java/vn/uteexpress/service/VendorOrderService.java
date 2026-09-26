@@ -19,17 +19,29 @@ public class VendorOrderService {
 	private final OrderRepository orderRepository;
 
 	public VendorOrderService(OrderRepository orderRepository) {
+
 		this.orderRepository = orderRepository;
 	}
+
+	// =========================
+	// GET ORDERS BY VENDOR
+	// =========================
 
 	@Transactional(readOnly = true)
 	public List<VendorOrderResponse> getOrdersByVendor(Long vendorId, OrderStatus status) {
 
+		if (vendorId == null) {
+			throw new IllegalArgumentException("Vendor ID không được null");
+		}
+
 		List<Order> orders;
 
 		if (status == null) {
+
 			orders = orderRepository.findOrdersByVendorId(vendorId);
+
 		} else {
+
 			orders = orderRepository.findOrdersByVendorIdAndStatus(vendorId, status);
 		}
 
@@ -37,20 +49,37 @@ public class VendorOrderService {
 				.filter(order -> !order.getItems().isEmpty()).toList();
 	}
 
+	// =========================
+	// GET ORDER DETAIL
+	// =========================
+
 	@Transactional(readOnly = true)
 	public VendorOrderResponse getOrderDetail(Long vendorId, Long orderId) {
+
+		if (vendorId == null) {
+			throw new IllegalArgumentException("Vendor ID không được null");
+		}
+
+		if (orderId == null) {
+			throw new IllegalArgumentException("Order ID không được null");
+		}
 
 		Order order = orderRepository.findById(orderId)
 				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));
 
 		VendorOrderResponse response = convertToVendorOrder(order, vendorId);
 
-		if (response.getItems().isEmpty()) {
+		if (response.getItems() == null || response.getItems().isEmpty()) {
+
 			throw new IllegalArgumentException("Đơn hàng không thuộc Shop của Vendor");
 		}
 
 		return response;
 	}
+
+	// =========================
+	// CONVERT ORDER
+	// =========================
 
 	private VendorOrderResponse convertToVendorOrder(Order order, Long vendorId) {
 
@@ -66,6 +95,10 @@ public class VendorOrderService {
 		return new VendorOrderResponse(order.getId(), order.getUser().getId(), order.getStatus(), order.getCouponCode(),
 				order.getCreatedAt(), vendorSubtotal, items);
 	}
+
+	// =========================
+	// CONVERT ORDER ITEM
+	// =========================
 
 	private VendorOrderItemResponse convertItem(OrderItem item) {
 

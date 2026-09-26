@@ -57,6 +57,14 @@ public class OrderService {
 	@Transactional
 	public Order checkout(Long userId, Long addressId, String couponCode) {
 
+		if (userId == null) {
+			throw new IllegalArgumentException("User ID không được null");
+		}
+
+		if (addressId == null) {
+			throw new IllegalArgumentException("Address ID không được null");
+		}
+
 		User user = userRepository.findById(userId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
@@ -66,7 +74,8 @@ public class OrderService {
 		Cart cart = cartRepository.findByUserId(userId)
 				.orElseThrow(() -> new IllegalArgumentException("Người dùng chưa có giỏ hàng"));
 
-		if (cart.getItems().isEmpty()) {
+		if (cart.getItems() == null || cart.getItems().isEmpty()) {
+
 			throw new IllegalArgumentException("Không thể đặt hàng khi giỏ hàng đang trống");
 		}
 
@@ -80,51 +89,117 @@ public class OrderService {
 
 		Map<Long, ShopOrder> shopOrders = new HashMap<>();
 
+		// =====================================================
+		// PROCESS CART
+		// =====================================================
+
 		for (CartItem cartItem : cart.getItems()) {
+
+			if (cartItem == null) {
+				throw new IllegalArgumentException("Cart chứa CartItem không hợp lệ");
+			}
 
 			Product product = cartItem.getProduct();
 
+			if (product == null) {
+				throw new IllegalArgumentException("Cart chứa sản phẩm không hợp lệ");
+			}
+
+			// =========================
+			// PRODUCT VALIDATION
+			// =========================
+
 			if (!product.isActive()) {
+
 				throw new IllegalArgumentException("Sản phẩm đã ngừng kinh doanh: " + product.getName());
 			}
 
-			if (cartItem.getQuantity() <= 0) {
-				throw new IllegalArgumentException("Số lượng sản phẩm không hợp lệ: " + product.getName());
-			}
-
-			if (cartItem.getQuantity() > product.getStock()) {
-				throw new IllegalArgumentException("Sản phẩm không đủ tồn kho: " + product.getName());
-			}
-
 			if (product.getShop() == null) {
+
 				throw new IllegalArgumentException("Sản phẩm chưa thuộc Shop: " + product.getName());
 			}
 
 			/*
-			 * Trừ tồn kho ngay khi checkout.
+			 * Shop đã bị ngừng hoạt động thì không cho tạo đơn mới.
 			 */
+			if (!product.getShop().isActive()) {
+
+				throw new IllegalArgumentException("Shop của sản phẩm đã ngừng hoạt động: " + product.getName());
+			}
+
+			if (cartItem.getQuantity() <= 0) {
+
+				throw new IllegalArgumentException("Số lượng sản phẩm không hợp lệ: " + product.getName());
+			}
+
+			if (product.getStock() < 0) {
+
+				throw new IllegalArgumentException("Tồn kho sản phẩm không hợp lệ: " + product.getName());
+			}
+
+			if (cartItem.getQuantity() > product.getStock()) {
+
+				throw new IllegalArgumentException("Sản phẩm không đủ tồn kho: " + product.getName());
+			}
+
+			// =================================================
+			// CALCULATE CURRENT PROMOTION PRICE
+			// =================================================
+
+			/*
+			 * Không dùng cartItem.getUnitPrice() làm giá cuối cùng vì giá trong Cart có thể
+			 * đã được tính từ trước khi checkout.
+			 *
+			 * Giá Promotion được tính lại tại thời điểm checkout.
+			 */
+			BigDecimal originalPrice = BigDecimal.valueOf(product.getPrice());
+
+			if (originalPrice == null || originalPrice.compareTo(BigDecimal.ZERO) < 0) {
+
+				throw new IllegalArgumentException("Giá sản phẩm không hợp lệ: " + product.getName());
+			}
+
+			BigDecimal finalPrice = promotionService.getFinalPriceForProduct(product.getId(), originalPrice);
+
+			if (finalPrice == null || finalPrice.compareTo(BigDecimal.ZERO) < 0) {
+
+				throw new IllegalArgumentException("Giá sau khuyến mãi không hợp lệ: " + product.getName());
+			}
+
+			// =================================================
+			// TRỪ TỒN KHO
+			// =================================================
+
 			product.setStock(product.getStock() - cartItem.getQuantity());
 
-			// =========================
+			// =================================================
 			// ORDER ITEM
-			// =========================
+			// =================================================
 
 			OrderItem orderItem = new OrderItem();
 
 			orderItem.setProduct(product);
+
 			orderItem.setProductName(product.getName());
-			orderItem.setUnitPrice(cartItem.getUnitPrice());
+
+			orderItem.setUnitPrice(finalPrice);
+
 			orderItem.setQuantity(cartItem.getQuantity());
 
 			order.addItem(orderItem);
 
 			subtotal = subtotal.add(orderItem.getSubtotal());
 
-			// =========================
+			// =================================================
 			// SHOP ORDER
-			// =========================
+			// =================================================
 
 			Long shopId = product.getShop().getId();
+
+			if (shopId == null) {
+
+				throw new IllegalArgumentException("Shop ID không hợp lệ");
+			}
 
 			ShopOrder shopOrder = shopOrders.get(shopId);
 
@@ -133,8 +208,11 @@ public class OrderService {
 				shopOrder = new ShopOrder();
 
 				shopOrder.setOrder(order);
+
 				shopOrder.setShop(product.getShop());
+
 				shopOrder.setStatus(ShopOrderStatus.PENDING);
+
 				shopOrder.setSubtotalAmount(BigDecimal.ZERO);
 
 				shopOrders.put(shopId, shopOrder);
@@ -142,16 +220,24 @@ public class OrderService {
 				order.getShopOrders().add(shopOrder);
 			}
 
-			// =========================
+			// =================================================
 			// SHOP ORDER ITEM
-			// =========================
+			// =================================================
 
 			ShopOrderItem shopOrderItem = new ShopOrderItem();
 
 			shopOrderItem.setShopOrder(shopOrder);
+
 			shopOrderItem.setProduct(product);
+
 			shopOrderItem.setProductName(product.getName());
-			shopOrderItem.setUnitPrice(cartItem.getUnitPrice());
+
+			/*
+			 * Phải dùng cùng finalPrice với OrderItem để tổng tiền ShopOrder khớp với
+			 * Order.
+			 */
+			shopOrderItem.setUnitPrice(finalPrice);
+
 			shopOrderItem.setQuantity(cartItem.getQuantity());
 
 			shopOrder.getItems().add(shopOrderItem);
@@ -159,30 +245,45 @@ public class OrderService {
 			shopOrder.setSubtotalAmount(shopOrder.getSubtotalAmount().add(shopOrderItem.getSubtotal()));
 		}
 
-		// =========================
+		// =====================================================
 		// COUPON
-		// =========================
+		// =====================================================
 
 		BigDecimal discount = BigDecimal.ZERO;
 
 		if (couponCode != null && !couponCode.trim().isEmpty()) {
 
-			Coupon coupon = couponService.getCouponByCode(couponCode.trim());
+			String normalizedCouponCode = couponCode.trim();
+
+			Coupon coupon = couponService.getCouponByCode(normalizedCouponCode);
 
 			if (coupon == null) {
+
 				throw new IllegalArgumentException("Coupon không tồn tại");
 			}
 
+			/*
+			 * calculateDiscount() tự kiểm tra: - active - thời gian - usage limit - minimum
+			 * order amount
+			 */
 			discount = couponService.calculateDiscount(coupon, subtotal);
+
+			if (discount == null || discount.compareTo(BigDecimal.ZERO) < 0) {
+
+				throw new IllegalArgumentException("Giá trị giảm giá không hợp lệ");
+			}
 
 			order.setCouponCode(coupon.getCode());
 
+			/*
+			 * Transaction hiện tại sẽ rollback nếu checkout thất bại.
+			 */
 			couponService.increaseUsedCount(coupon);
 		}
 
-		// =========================
+		// =====================================================
 		// TOTAL
-		// =========================
+		// =====================================================
 
 		BigDecimal total = subtotal.subtract(discount);
 
@@ -192,20 +293,23 @@ public class OrderService {
 		}
 
 		order.setSubtotalAmount(subtotal);
+
 		order.setDiscountAmount(discount);
+
 		order.setTotalAmount(total);
 
-		// =========================
+		// =====================================================
 		// SAVE ORDER
-		// =========================
+		// =====================================================
 
 		Order savedOrder = orderRepository.save(order);
 
-		// =========================
+		// =====================================================
 		// CLEAR CART
-		// =========================
+		// =====================================================
 
 		cart.getItems().clear();
+
 		cart.setTotalAmount(BigDecimal.ZERO);
 
 		cartRepository.save(cart);
@@ -220,6 +324,10 @@ public class OrderService {
 	@Transactional(readOnly = true)
 	public List<Order> getOrdersByUser(Long userId) {
 
+		if (userId == null) {
+			throw new IllegalArgumentException("User ID không được null");
+		}
+
 		return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
 	}
 
@@ -230,18 +338,28 @@ public class OrderService {
 	@Transactional(readOnly = true)
 	public List<Order> getOrdersByUserAndStatus(Long userId, OrderStatus status) {
 
+		if (userId == null) {
+			throw new IllegalArgumentException("User ID không được null");
+		}
+
 		if (status == null) {
+
 			return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
 		}
 
 		return orderRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status);
 	}
+
 	// =========================================================
 	// GET ORDER
 	// =========================================================
 
 	@Transactional(readOnly = true)
 	public Order getOrder(Long orderId) {
+
+		if (orderId == null) {
+			throw new IllegalArgumentException("Order ID không được null");
+		}
 
 		return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 	}
@@ -253,36 +371,46 @@ public class OrderService {
 	@Transactional
 	public Order cancelOrder(Long orderId, Long userId) {
 
+		if (orderId == null) {
+			throw new IllegalArgumentException("Order ID không được null");
+		}
+
+		if (userId == null) {
+			throw new IllegalArgumentException("User ID không được null");
+		}
+
 		Order order = orderRepository.findById(orderId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
 
-		/*
-		 * Kiểm tra quyền sở hữu Order.
-		 */
+		// =====================================================
+		// OWNERSHIP
+		// =====================================================
+
 		if (order.getUser() == null || !order.getUser().getId().equals(userId)) {
 
 			throw new IllegalArgumentException("Đơn hàng không thuộc người dùng này");
 		}
 
-		/*
-		 * Chống hủy lần 2.
-		 */
+		// =====================================================
+		// CHECK STATUS
+		// =====================================================
+
 		if (order.getStatus() == OrderStatus.CANCELLED) {
 
 			throw new IllegalArgumentException("Đơn hàng đã được hủy trước đó");
 		}
 
 		/*
-		 * Chỉ cho phép hủy PENDING/CONFIRMED.
+		 * Chỉ cho phép hủy PENDING / CONFIRMED.
 		 */
 		if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
 
 			throw new IllegalArgumentException("Không thể hủy đơn hàng ở trạng thái " + order.getStatus());
 		}
 
-		// =========================
+		// =====================================================
 		// HOÀN TỒN KHO
-		// =========================
+		// =====================================================
 
 		for (OrderItem item : order.getItems()) {
 
@@ -294,9 +422,9 @@ public class OrderService {
 			}
 		}
 
-		// =========================
+		// =====================================================
 		// HỦY SHOP ORDER
-		// =========================
+		// =====================================================
 
 		if (order.getShopOrders() != null) {
 
@@ -310,9 +438,9 @@ public class OrderService {
 			}
 		}
 
-		// =========================
+		// =====================================================
 		// HOÀN LƯỢT COUPON
-		// =========================
+		// =====================================================
 
 		if (order.getCouponCode() != null && !order.getCouponCode().trim().isEmpty()) {
 
@@ -324,20 +452,29 @@ public class OrderService {
 			}
 		}
 
-		// =========================
+		// =====================================================
 		// CANCEL ORDER
-		// =========================
+		// =====================================================
 
 		order.setStatus(OrderStatus.CANCELLED);
 
 		return orderRepository.save(order);
 	}
+
 	// =========================================================
 	// GET SHOP ORDERS OF USER ORDER
 	// =========================================================
 
 	@Transactional(readOnly = true)
 	public List<ShopOrder> getShopOrdersByUser(Long orderId, Long userId) {
+
+		if (orderId == null) {
+			throw new IllegalArgumentException("Order ID không được null");
+		}
+
+		if (userId == null) {
+			throw new IllegalArgumentException("User ID không được null");
+		}
 
 		Order order = orderRepository.findById(orderId)
 				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));

@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.uteexpress.entity.Comment;
 import vn.uteexpress.entity.CommentMedia;
 import vn.uteexpress.entity.MediaType;
+import vn.uteexpress.entity.User;
 import vn.uteexpress.repository.CommentMediaRepository;
 import vn.uteexpress.repository.CommentRepository;
 
@@ -29,6 +30,7 @@ public class CommentMediaService {
 	public CommentMediaService(CommentMediaRepository commentMediaRepository, CommentRepository commentRepository) {
 
 		this.commentMediaRepository = commentMediaRepository;
+
 		this.commentRepository = commentRepository;
 
 		try {
@@ -43,7 +45,9 @@ public class CommentMediaService {
 	// =========================
 
 	@Transactional
-	public CommentMedia uploadMedia(Long commentId, MultipartFile file) {
+	public CommentMedia uploadMedia(Long commentId, MultipartFile file, User currentUser) {
+
+		checkUser(currentUser);
 
 		if (file == null || file.isEmpty()) {
 			throw new IllegalArgumentException("File không được để trống");
@@ -51,6 +55,8 @@ public class CommentMediaService {
 
 		Comment comment = commentRepository.findById(commentId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy comment"));
+
+		checkCommentAccess(comment, currentUser);
 
 		MediaType mediaType = detectMediaType(file.getContentType());
 
@@ -62,7 +68,15 @@ public class CommentMediaService {
 
 		String storedFilename = UUID.randomUUID() + extension;
 
-		Path targetPath = uploadDirectory.resolve(storedFilename);
+		Path targetPath = uploadDirectory.resolve(storedFilename).normalize();
+
+		/*
+		 * Đảm bảo file không thể thoát khỏi thư mục uploads/comments.
+		 */
+		if (!targetPath.startsWith(uploadDirectory.toAbsolutePath().normalize())) {
+
+			throw new IllegalArgumentException("Đường dẫn file không hợp lệ");
+		}
 
 		try {
 
@@ -87,7 +101,12 @@ public class CommentMediaService {
 	// GET MEDIA
 	// =========================
 
+	@Transactional(readOnly = true)
 	public List<CommentMedia> getMediaByComment(Long commentId) {
+
+		if (commentId == null) {
+			throw new IllegalArgumentException("Comment ID không được null");
+		}
 
 		return commentMediaRepository.findByCommentId(commentId);
 	}
@@ -97,10 +116,20 @@ public class CommentMediaService {
 	// =========================
 
 	@Transactional
-	public void deleteMedia(Long mediaId) {
+	public void deleteMedia(Long mediaId, User currentUser) {
+
+		checkUser(currentUser);
 
 		CommentMedia media = commentMediaRepository.findById(mediaId)
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy media"));
+
+		Comment comment = media.getComment();
+
+		if (comment == null) {
+			throw new IllegalArgumentException("Media không thuộc Comment hợp lệ");
+		}
+
+		checkCommentAccess(comment, currentUser);
 
 		String mediaUrl = media.getMediaUrl();
 
@@ -108,16 +137,60 @@ public class CommentMediaService {
 
 			String filename = mediaUrl.substring("/uploads/comments/".length());
 
-			Path filePath = uploadDirectory.resolve(filename);
+			Path filePath = uploadDirectory.resolve(filename).normalize();
+
+			/*
+			 * Không cho phép mediaUrl chứa đường dẫn thoát khỏi thư mục upload.
+			 */
+			if (!filePath.startsWith(uploadDirectory.toAbsolutePath().normalize())) {
+
+				throw new IllegalArgumentException("Đường dẫn file không hợp lệ");
+			}
 
 			try {
+
 				Files.deleteIfExists(filePath);
+
 			} catch (IOException e) {
+
 				throw new RuntimeException("Không thể xóa file", e);
 			}
 		}
 
 		commentMediaRepository.delete(media);
+	}
+
+	// =========================
+	// CHECK USER
+	// =========================
+
+	private void checkUser(User currentUser) {
+
+		if (currentUser == null) {
+			throw new IllegalArgumentException("Chưa đăng nhập");
+		}
+	}
+
+	// =========================
+	// CHECK COMMENT OWNERSHIP
+	// =========================
+
+	private void checkCommentAccess(Comment comment, User currentUser) {
+
+		if (comment.getUser() == null) {
+			throw new IllegalArgumentException("Comment không có người dùng");
+		}
+
+		boolean isAdmin = currentUser.getRole() != null && "ADMIN".equalsIgnoreCase(currentUser.getRole().getName());
+
+		if (isAdmin) {
+			return;
+		}
+
+		if (!comment.getUser().getId().equals(currentUser.getId())) {
+
+			throw new IllegalArgumentException("Bạn không có quyền thao tác media " + "của comment này");
+		}
 	}
 
 	// =========================
@@ -180,6 +253,15 @@ public class CommentMediaService {
 			return "";
 		}
 
-		return filename.substring(filename.lastIndexOf("."));
+		String extension = filename.substring(filename.lastIndexOf("."));
+
+		/*
+		 * Không cho extension quá dài.
+		 */
+		if (extension.length() > 10) {
+			throw new IllegalArgumentException("Phần mở rộng file không hợp lệ");
+		}
+
+		return extension;
 	}
 }
