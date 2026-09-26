@@ -34,27 +34,7 @@ public class ShipmentService {
 	 * Lưu ý: Với hệ thống hiện tại, luồng chính nên dùng
 	 * createShipmentFromShopOrder().
 	 */
-	@Transactional
-	public Shipment createShipment(Long orderId) {
-
-		Order order = findOrder(orderId);
-
-		if (order.getStatus() == OrderStatus.CANCELLED) {
-			throw new IllegalArgumentException("Không thể tạo vận đơn cho đơn hàng đã hủy");
-		}
-
-		if (!shipmentRepository.findByOrderId(orderId).isEmpty()) {
-			throw new IllegalArgumentException("Đơn hàng đã có vận đơn");
-		}
-
-		Shipment shipment = new Shipment();
-
-		shipment.setOrder(order);
-		shipment.setTrackingCode(generateTrackingCode());
-		shipment.setStatus(ShipmentStatus.READY);
-
-		return shipmentRepository.save(shipment);
-	}
+	
 
 	/**
 	 * Gán Shipper cho Shipment.
@@ -362,11 +342,7 @@ public class ShipmentService {
 				.orElseThrow(() -> new RuntimeException("Không tìm thấy vận đơn với ID: " + id));
 	}
 
-	private Order findOrder(Long id) {
 
-		return orderRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng với ID: " + id));
-	}
 
 	private User findShipper(Long id) {
 

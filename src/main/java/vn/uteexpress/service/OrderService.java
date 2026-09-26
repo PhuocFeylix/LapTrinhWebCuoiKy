@@ -1,17 +1,34 @@
 package vn.uteexpress.service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
-import java.util.Map;
-import vn.uteexpress.entity.*;
-import vn.uteexpress.repository.*;
-import vn.uteexpress.service.CouponService;
+
+import vn.uteexpress.entity.Address;
+import vn.uteexpress.entity.Cart;
+import vn.uteexpress.entity.CartItem;
+import vn.uteexpress.entity.Coupon;
+import vn.uteexpress.entity.Order;
+import vn.uteexpress.entity.OrderItem;
+import vn.uteexpress.entity.OrderStatus;
+import vn.uteexpress.entity.Product;
+import vn.uteexpress.entity.ShopOrder;
+import vn.uteexpress.entity.ShopOrderItem;
+import vn.uteexpress.entity.ShopOrderStatus;
+import vn.uteexpress.entity.User;
+import vn.uteexpress.repository.AddressRepository;
+import vn.uteexpress.repository.CartRepository;
+import vn.uteexpress.repository.OrderRepository;
+import vn.uteexpress.repository.ShopOrderRepository;
+import vn.uteexpress.repository.UserRepository;
 
 @Service
 public class OrderService {
+
 	private final OrderRepository orderRepository;
 	private final CartRepository cartRepository;
 	private final AddressRepository addressRepository;
@@ -32,6 +49,10 @@ public class OrderService {
 		this.couponService = couponService;
 		this.shopOrderRepository = shopOrderRepository;
 	}
+
+	// =========================================================
+	// CHECKOUT
+	// =========================================================
 
 	@Transactional
 	public Order checkout(Long userId, Long addressId, String couponCode) {
@@ -57,10 +78,6 @@ public class OrderService {
 
 		BigDecimal subtotal = BigDecimal.ZERO;
 
-		// =========================
-		// TẠO ORDER ITEM
-		// =========================
-
 		Map<Long, ShopOrder> shopOrders = new HashMap<>();
 
 		for (CartItem cartItem : cart.getItems()) {
@@ -71,6 +88,10 @@ public class OrderService {
 				throw new IllegalArgumentException("Sản phẩm đã ngừng kinh doanh: " + product.getName());
 			}
 
+			if (cartItem.getQuantity() <= 0) {
+				throw new IllegalArgumentException("Số lượng sản phẩm không hợp lệ: " + product.getName());
+			}
+
 			if (cartItem.getQuantity() > product.getStock()) {
 				throw new IllegalArgumentException("Sản phẩm không đủ tồn kho: " + product.getName());
 			}
@@ -79,10 +100,13 @@ public class OrderService {
 				throw new IllegalArgumentException("Sản phẩm chưa thuộc Shop: " + product.getName());
 			}
 
+			/*
+			 * Trừ tồn kho ngay khi checkout.
+			 */
 			product.setStock(product.getStock() - cartItem.getQuantity());
 
 			// =========================
-			// ORDER ITEM CŨ
+			// ORDER ITEM
 			// =========================
 
 			OrderItem orderItem = new OrderItem();
@@ -114,6 +138,7 @@ public class OrderService {
 				shopOrder.setSubtotalAmount(BigDecimal.ZERO);
 
 				shopOrders.put(shopId, shopOrder);
+
 				order.getShopOrders().add(shopOrder);
 			}
 
@@ -152,17 +177,17 @@ public class OrderService {
 
 			order.setCouponCode(coupon.getCode());
 
-			// Tăng lượt sử dụng
 			couponService.increaseUsedCount(coupon);
 		}
 
 		// =========================
-		// TÍNH TỔNG
+		// TOTAL
 		// =========================
 
 		BigDecimal total = subtotal.subtract(discount);
 
 		if (total.compareTo(BigDecimal.ZERO) < 0) {
+
 			total = BigDecimal.ZERO;
 		}
 
@@ -188,11 +213,140 @@ public class OrderService {
 		return savedOrder;
 	}
 
+	// =========================================================
+	// GET ORDERS BY USER
+	// =========================================================
+
+	@Transactional(readOnly = true)
 	public List<Order> getOrdersByUser(Long userId) {
+
 		return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
 	}
 
+	// =========================================================
+	// GET ORDERS BY USER + STATUS
+	// =========================================================
+
+	@Transactional(readOnly = true)
+	public List<Order> getOrdersByUserAndStatus(Long userId, OrderStatus status) {
+
+		if (status == null) {
+			return orderRepository.findByUserIdOrderByCreatedAtDesc(userId);
+		}
+
+		return orderRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status);
+	}
+	// =========================================================
+	// GET ORDER
+	// =========================================================
+
+	@Transactional(readOnly = true)
 	public Order getOrder(Long orderId) {
+
 		return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+	}
+
+	// =========================================================
+	// CANCEL ORDER
+	// =========================================================
+
+	@Transactional
+	public Order cancelOrder(Long orderId, Long userId) {
+
+		Order order = orderRepository.findById(orderId)
+				.orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+		/*
+		 * Kiểm tra quyền sở hữu Order.
+		 */
+		if (order.getUser() == null || !order.getUser().getId().equals(userId)) {
+
+			throw new IllegalArgumentException("Đơn hàng không thuộc người dùng này");
+		}
+
+		/*
+		 * Chống hủy lần 2.
+		 */
+		if (order.getStatus() == OrderStatus.CANCELLED) {
+
+			throw new IllegalArgumentException("Đơn hàng đã được hủy trước đó");
+		}
+
+		/*
+		 * Chỉ cho phép hủy PENDING/CONFIRMED.
+		 */
+		if (order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.CONFIRMED) {
+
+			throw new IllegalArgumentException("Không thể hủy đơn hàng ở trạng thái " + order.getStatus());
+		}
+
+		// =========================
+		// HOÀN TỒN KHO
+		// =========================
+
+		for (OrderItem item : order.getItems()) {
+
+			Product product = item.getProduct();
+
+			if (product != null) {
+
+				product.setStock(product.getStock() + item.getQuantity());
+			}
+		}
+
+		// =========================
+		// HỦY SHOP ORDER
+		// =========================
+
+		if (order.getShopOrders() != null) {
+
+			for (ShopOrder shopOrder : order.getShopOrders()) {
+
+				if (shopOrder.getStatus() != ShopOrderStatus.DELIVERED
+						&& shopOrder.getStatus() != ShopOrderStatus.SHIPPING) {
+
+					shopOrder.setStatus(ShopOrderStatus.CANCELLED);
+				}
+			}
+		}
+
+		// =========================
+		// HOÀN LƯỢT COUPON
+		// =========================
+
+		if (order.getCouponCode() != null && !order.getCouponCode().trim().isEmpty()) {
+
+			Coupon coupon = couponService.getCouponByCode(order.getCouponCode());
+
+			if (coupon != null) {
+
+				couponService.decreaseUsedCount(coupon);
+			}
+		}
+
+		// =========================
+		// CANCEL ORDER
+		// =========================
+
+		order.setStatus(OrderStatus.CANCELLED);
+
+		return orderRepository.save(order);
+	}
+	// =========================================================
+	// GET SHOP ORDERS OF USER ORDER
+	// =========================================================
+
+	@Transactional(readOnly = true)
+	public List<ShopOrder> getShopOrdersByUser(Long orderId, Long userId) {
+
+		Order order = orderRepository.findById(orderId)
+				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng"));
+
+		if (order.getUser() == null || !order.getUser().getId().equals(userId)) {
+
+			throw new IllegalArgumentException("Đơn hàng không thuộc người dùng này");
+		}
+
+		return shopOrderRepository.findByOrderId(orderId);
 	}
 }

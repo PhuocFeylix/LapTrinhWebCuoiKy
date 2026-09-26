@@ -17,4 +17,5 @@ public interface ShopOrderRepository extends JpaRepository<ShopOrder, Long> {
 	Optional<ShopOrder> findByIdAndShopId(Long id, Long shopId);
 
 	List<ShopOrder> findByOrderId(Long orderId);
+	List<ShopOrder> findByStatusOrderByCreatedAtDesc(ShopOrderStatus status);
 }

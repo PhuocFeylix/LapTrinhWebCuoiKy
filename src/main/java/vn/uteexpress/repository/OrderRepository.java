@@ -13,6 +13,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
 	List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+	List<Order> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, OrderStatus status);
+
 	@Query("""
 			    SELECT COUNT(o) > 0
 			    FROM Order o

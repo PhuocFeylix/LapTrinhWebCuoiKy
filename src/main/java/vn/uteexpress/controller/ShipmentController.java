@@ -21,11 +21,6 @@ public class ShipmentController {
 		this.shipmentService = shipmentService;
 	}
 
-	@PostMapping("/order/{orderId}")
-	public ResponseEntity<Shipment> createShipment(@PathVariable Long orderId) {
-
-		return ResponseEntity.ok(shipmentService.createShipment(orderId));
-	}
 
 	@PutMapping("/{shipmentId}/assign/{shipperId}")
 	public ResponseEntity<Shipment> assignShipper(@PathVariable Long shipmentId, @PathVariable Long shipperId) {

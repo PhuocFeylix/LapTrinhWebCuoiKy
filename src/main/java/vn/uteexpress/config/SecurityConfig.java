@@ -53,12 +53,16 @@ public class SecurityConfig {
 				// SHIPPER
 				// =========================
 				.requestMatchers("/shipper/**").hasAnyRole("SHIPPER", "ADMIN")
-
-				.requestMatchers("/api/shipper/**").hasAnyRole("SHIPPER", "ADMIN")
 				
+				.requestMatchers("/api/shipper/**").hasAnyRole("SHIPPER", "ADMIN")
+				.requestMatchers("/api/admin/shipments/**")
+				
+			    .hasAnyRole("ADMIN", "MANAGER")
 				// =========================
 				// CÁC URL KHÁC
 				// =========================
+			    .requestMatchers("/api/manager/shop-orders/**")
+			    .hasAnyRole("MANAGER", "ADMIN")
 				.anyRequest().authenticated())
 
 				// =========================
@@ -80,4 +84,5 @@ public class SecurityConfig {
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
 	}
+	
 }
