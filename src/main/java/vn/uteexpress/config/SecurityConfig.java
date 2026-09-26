@@ -54,6 +54,8 @@ public class SecurityConfig {
 				// =========================
 				.requestMatchers("/shipper/**").hasAnyRole("SHIPPER", "ADMIN")
 
+				.requestMatchers("/api/shipper/**").hasAnyRole("SHIPPER", "ADMIN")
+				
 				// =========================
 				// CÁC URL KHÁC
 				// =========================

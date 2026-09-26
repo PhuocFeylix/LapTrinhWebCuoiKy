@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.HashMap;
+import java.util.Map;
 import vn.uteexpress.entity.*;
 import vn.uteexpress.repository.*;
 import vn.uteexpress.service.CouponService;
@@ -17,10 +18,11 @@ public class OrderService {
 	private final UserRepository userRepository;
 	private final PromotionService promotionService;
 	private final CouponService couponService;
+	private final ShopOrderRepository shopOrderRepository;
 
 	public OrderService(OrderRepository orderRepository, CartRepository cartRepository,
 			AddressRepository addressRepository, UserRepository userRepository, PromotionService promotionService,
-			CouponService couponService) {
+			CouponService couponService, ShopOrderRepository shopOrderRepository) {
 
 		this.orderRepository = orderRepository;
 		this.cartRepository = cartRepository;
@@ -28,6 +30,7 @@ public class OrderService {
 		this.userRepository = userRepository;
 		this.promotionService = promotionService;
 		this.couponService = couponService;
+		this.shopOrderRepository = shopOrderRepository;
 	}
 
 	@Transactional
@@ -58,6 +61,8 @@ public class OrderService {
 		// TẠO ORDER ITEM
 		// =========================
 
+		Map<Long, ShopOrder> shopOrders = new HashMap<>();
+
 		for (CartItem cartItem : cart.getItems()) {
 
 			Product product = cartItem.getProduct();
@@ -70,21 +75,63 @@ public class OrderService {
 				throw new IllegalArgumentException("Sản phẩm không đủ tồn kho: " + product.getName());
 			}
 
+			if (product.getShop() == null) {
+				throw new IllegalArgumentException("Sản phẩm chưa thuộc Shop: " + product.getName());
+			}
+
 			product.setStock(product.getStock() - cartItem.getQuantity());
+
+			// =========================
+			// ORDER ITEM CŨ
+			// =========================
 
 			OrderItem orderItem = new OrderItem();
 
 			orderItem.setProduct(product);
 			orderItem.setProductName(product.getName());
-
-			// Giá đã bao gồm Promotion
 			orderItem.setUnitPrice(cartItem.getUnitPrice());
-
 			orderItem.setQuantity(cartItem.getQuantity());
 
 			order.addItem(orderItem);
 
 			subtotal = subtotal.add(orderItem.getSubtotal());
+
+			// =========================
+			// SHOP ORDER
+			// =========================
+
+			Long shopId = product.getShop().getId();
+
+			ShopOrder shopOrder = shopOrders.get(shopId);
+
+			if (shopOrder == null) {
+
+				shopOrder = new ShopOrder();
+
+				shopOrder.setOrder(order);
+				shopOrder.setShop(product.getShop());
+				shopOrder.setStatus(ShopOrderStatus.PENDING);
+				shopOrder.setSubtotalAmount(BigDecimal.ZERO);
+
+				shopOrders.put(shopId, shopOrder);
+				order.getShopOrders().add(shopOrder);
+			}
+
+			// =========================
+			// SHOP ORDER ITEM
+			// =========================
+
+			ShopOrderItem shopOrderItem = new ShopOrderItem();
+
+			shopOrderItem.setShopOrder(shopOrder);
+			shopOrderItem.setProduct(product);
+			shopOrderItem.setProductName(product.getName());
+			shopOrderItem.setUnitPrice(cartItem.getUnitPrice());
+			shopOrderItem.setQuantity(cartItem.getQuantity());
+
+			shopOrder.getItems().add(shopOrderItem);
+
+			shopOrder.setSubtotalAmount(shopOrder.getSubtotalAmount().add(shopOrderItem.getSubtotal()));
 		}
 
 		// =========================
