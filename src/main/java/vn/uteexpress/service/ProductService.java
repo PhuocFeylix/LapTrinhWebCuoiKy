@@ -15,266 +15,309 @@ import vn.uteexpress.repository.ShopRepository;
 @Service
 public class ProductService {
 
-	private final ProductRepository productRepository;
-	private final CategoryRepository categoryRepository;
-	private final ShopRepository shopRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final ShopRepository shopRepository;
 
-	public ProductService(ProductRepository productRepository, CategoryRepository categoryRepository,
-			ShopRepository shopRepository) {
+    public ProductService(ProductRepository productRepository,
+            CategoryRepository categoryRepository,
+            ShopRepository shopRepository) {
 
-		this.productRepository = productRepository;
-		this.categoryRepository = categoryRepository;
-		this.shopRepository = shopRepository;
-	}
+        this.productRepository = productRepository;
+        this.categoryRepository = categoryRepository;
+        this.shopRepository = shopRepository;
+    }
 
-	// =========================
-	// GET PRODUCT OF VENDOR
-	// =========================
+    // =========================
+    // GET PRODUCT OF VENDOR
+    // =========================
 
-	private Product getProductOfVendor(Long productId, Long vendorId) {
+    private Product getProductOfVendor(Long productId, Long vendorId) {
 
-		Product product = productRepository.findById(productId)
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy sản phẩm"));
 
-		if (product.getShop() == null || product.getShop().getVendor() == null
-				|| !product.getShop().getVendor().getId().equals(vendorId)) {
+        if (product.getShop() == null
+                || product.getShop().getVendor() == null
+                || !product.getShop().getVendor().getId().equals(vendorId)) {
 
-			throw new IllegalArgumentException("Sản phẩm không thuộc shop của Vendor");
-		}
+            throw new IllegalArgumentException(
+                    "Sản phẩm không thuộc shop của Vendor");
+        }
 
-		return product;
-	}
+        return product;
+    }
 
-	// =========================
-	// FIND ALL
-	// =========================
+    // =========================
+    // PUBLIC: FIND ALL ACTIVE
+    // =========================
 
-	public Page<Product> findAll(int page, int size) {
+    public Page<Product> findAll(int page, int size) {
 
-		Pageable pageable = PageRequest.of(page, size);
+        Pageable pageable = PageRequest.of(page, size);
 
-		return productRepository.findAll(pageable);
-	}
+        return productRepository.findByActiveTrue(pageable);
+    }
 
-	// =========================
-	// FIND BY ID
-	// =========================
+    // =========================
+    // INTERNAL: FIND BY ID
+    // =========================
 
-	public Product findById(Long id) {
+    public Product findById(Long id) {
 
-		return productRepository.findById(id)
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
-	}
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy sản phẩm với ID: " + id));
+    }
 
-	// =========================
-	// CREATE
-	// =========================
+    // =========================
+    // PUBLIC: FIND ACTIVE BY ID
+    // =========================
 
-	public Product create(Product product) {
+    public Product findPublicById(Long id) {
 
-		validateProduct(product);
+        return productRepository.findById(id)
+                .filter(Product::isActive)
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy sản phẩm đang hoạt động với ID: " + id));
+    }
 
-		Category category = categoryRepository.findById(product.getCategory().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy category"));
+    // =========================
+    // CREATE
+    // =========================
 
-		Shop shop = shopRepository.findById(product.getShop().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy shop"));
+    public Product create(Product product) {
 
-		product.setCategory(category);
-		product.setShop(shop);
-		product.setName(product.getName().trim());
-		product.setActive(true);
+        validateProduct(product);
 
-		return productRepository.save(product);
-	}
+        Category category = categoryRepository
+                .findById(product.getCategory().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy category"));
 
-	// =========================
-	// CREATE BY VENDOR
-	// =========================
+        Shop shop = shopRepository
+                .findById(product.getShop().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy shop"));
 
-	public Product createByVendor(Long vendorId, Product product) {
+        product.setCategory(category);
+        product.setShop(shop);
+        product.setName(product.getName().trim());
+        product.setActive(true);
 
-		validateProduct(product);
+        return productRepository.save(product);
+    }
 
-		Category category = categoryRepository.findById(product.getCategory().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy category"));
+    // =========================
+    // CREATE BY VENDOR
+    // =========================
 
-		Shop shop = shopRepository.findById(product.getShop().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy shop"));
+    public Product createByVendor(Long vendorId, Product product) {
 
-		// Kiểm tra Shop có thuộc Vendor hiện tại không
-		if (shop.getVendor() == null || !shop.getVendor().getId().equals(vendorId)) {
+        validateProduct(product);
 
-			throw new IllegalArgumentException("Shop không thuộc Vendor hiện tại");
-		}
+        Category category = categoryRepository
+                .findById(product.getCategory().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy category"));
 
-		product.setCategory(category);
-		product.setShop(shop);
-		product.setName(product.getName().trim());
-		product.setActive(true);
+        Shop shop = shopRepository
+                .findById(product.getShop().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy shop"));
 
-		return productRepository.save(product);
-	}
+        if (shop.getVendor() == null
+                || !shop.getVendor().getId().equals(vendorId)) {
 
-	// =========================
-	// UPDATE
-	// =========================
+            throw new IllegalArgumentException(
+                    "Shop không thuộc Vendor hiện tại");
+        }
 
-	public Product update(Long id, Product product) {
+        product.setCategory(category);
+        product.setShop(shop);
+        product.setName(product.getName().trim());
+        product.setActive(true);
 
-		Product existing = findById(id);
+        return productRepository.save(product);
+    }
 
-		validateProduct(product);
+    // =========================
+    // UPDATE
+    // =========================
 
-		Category category = categoryRepository.findById(product.getCategory().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy category"));
+    public Product update(Long id, Product product) {
 
-		Shop shop = shopRepository.findById(product.getShop().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy shop"));
+        Product existing = findById(id);
 
-		existing.setName(product.getName().trim());
-		existing.setDescription(product.getDescription());
-		existing.setPrice(product.getPrice());
-		existing.setStock(product.getStock());
-		existing.setImage(product.getImage());
-		existing.setActive(product.isActive());
-		existing.setCategory(category);
-		existing.setShop(shop);
+        validateProduct(product);
 
-		return productRepository.save(existing);
-	}
+        Category category = categoryRepository
+                .findById(product.getCategory().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy category"));
 
-	// =========================
-	// UPDATE BY VENDOR
-	// =========================
+        Shop shop = shopRepository
+                .findById(product.getShop().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy shop"));
 
-	public Product updateByVendor(Long productId, Long vendorId, Product product) {
+        existing.setName(product.getName().trim());
+        existing.setDescription(product.getDescription());
+        existing.setPrice(product.getPrice());
+        existing.setStock(product.getStock());
+        existing.setImage(product.getImage());
+        existing.setActive(product.isActive());
+        existing.setCategory(category);
+        existing.setShop(shop);
 
-		Product existing = getProductOfVendor(productId, vendorId);
+        return productRepository.save(existing);
+    }
 
-		validateProduct(product);
+    // =========================
+    // UPDATE BY VENDOR
+    // =========================
 
-		Category category = categoryRepository.findById(product.getCategory().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy category"));
+    public Product updateByVendor(Long productId, Long vendorId,
+            Product product) {
 
-		Shop shop = shopRepository.findById(product.getShop().getId())
-				.orElseThrow(() -> new RuntimeException("Không tìm thấy shop"));
+        Product existing = getProductOfVendor(productId, vendorId);
 
-		// Vendor không được chuyển Product
-		// sang Shop khác
-		if (!shop.getId().equals(existing.getShop().getId())) {
+        validateProduct(product);
 
-			throw new IllegalArgumentException("Vendor không được chuyển sản phẩm sang Shop khác");
-		}
+        Category category = categoryRepository
+                .findById(product.getCategory().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy category"));
 
-		existing.setName(product.getName().trim());
-		existing.setDescription(product.getDescription());
-		existing.setPrice(product.getPrice());
-		existing.setStock(product.getStock());
-		existing.setImage(product.getImage());
-		existing.setActive(product.isActive());
-		existing.setCategory(category);
+        Shop shop = shopRepository
+                .findById(product.getShop().getId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Không tìm thấy shop"));
 
-		// Không thay đổi Shop của Product
-		// existing.setShop(...) không cần gọi
+        if (!shop.getId().equals(existing.getShop().getId())) {
 
-		return productRepository.save(existing);
-	}
+            throw new IllegalArgumentException(
+                    "Vendor không được chuyển sản phẩm sang Shop khác");
+        }
 
-	// =========================
-	// DELETE
-	// =========================
+        existing.setName(product.getName().trim());
+        existing.setDescription(product.getDescription());
+        existing.setPrice(product.getPrice());
+        existing.setStock(product.getStock());
+        existing.setImage(product.getImage());
+        existing.setActive(product.isActive());
+        existing.setCategory(category);
 
-	public void delete(Long id) {
+        return productRepository.save(existing);
+    }
 
-		Product product = findById(id);
+    // =========================
+    // DELETE
+    // =========================
 
-		productRepository.delete(product);
-	}
+    public void delete(Long id) {
 
-	// =========================
-	// DELETE BY VENDOR
-	// =========================
+        Product product = findById(id);
 
-	public void deleteByVendor(Long productId, Long vendorId) {
+        productRepository.delete(product);
+    }
 
-		Product product = getProductOfVendor(productId, vendorId);
+    // =========================
+    // DELETE BY VENDOR
+    // =========================
 
-		productRepository.delete(product);
-	}
+    public void deleteByVendor(Long productId, Long vendorId) {
 
-	// =========================
-	// SEARCH
-	// =========================
+        Product product = getProductOfVendor(productId, vendorId);
 
-	public Page<Product> search(String keyword, int page, int size) {
+        productRepository.delete(product);
+    }
 
-		Pageable pageable = PageRequest.of(page, size);
+    // =========================
+    // PUBLIC: SEARCH ACTIVE
+    // =========================
 
-		if (keyword == null || keyword.trim().isEmpty()) {
+    public Page<Product> search(String keyword, int page, int size) {
 
-			return productRepository.findAll(pageable);
-		}
+        Pageable pageable = PageRequest.of(page, size);
 
-		return productRepository.findByNameContainingIgnoreCase(keyword.trim(), pageable);
-	}
+        if (keyword == null || keyword.trim().isEmpty()) {
 
-	// =========================
-	// FIND BY CATEGORY
-	// =========================
+            return productRepository.findByActiveTrue(pageable);
+        }
 
-	public Page<Product> findByCategory(Long categoryId, int page, int size) {
+        return productRepository.findByNameContainingIgnoreCaseAndActiveTrue(
+                keyword.trim(), pageable);
+    }
 
-		Pageable pageable = PageRequest.of(page, size);
+    // =========================
+    // PUBLIC: FIND BY CATEGORY
+    // =========================
 
-		return productRepository.findByCategoryId(categoryId, pageable);
-	}
+    public Page<Product> findByCategory(Long categoryId, int page, int size) {
 
-	// =========================
-	// FIND BY SHOP
-	// =========================
+        Pageable pageable = PageRequest.of(page, size);
 
-	public Page<Product> findByShop(Long shopId, int page, int size) {
+        return productRepository.findByCategoryIdAndActiveTrue(
+                categoryId, pageable);
+    }
 
-		Pageable pageable = PageRequest.of(page, size);
+    // =========================
+    // PUBLIC: FIND BY SHOP
+    // =========================
 
-		return productRepository.findByShopId(shopId, pageable);
-	}
+    public Page<Product> findByShop(Long shopId, int page, int size) {
 
-	// =========================
-	// VALIDATE PRODUCT
-	// =========================
+        Pageable pageable = PageRequest.of(page, size);
 
-	private void validateProduct(Product product) {
+        return productRepository.findByShopIdAndActiveTrue(
+                shopId, pageable);
+    }
 
-		if (product == null) {
+    // =========================
+    // VALIDATE PRODUCT
+    // =========================
 
-			throw new IllegalArgumentException("Sản phẩm không được null");
-		}
+    private void validateProduct(Product product) {
 
-		if (product.getName() == null || product.getName().trim().isEmpty()) {
+        if (product == null) {
 
-			throw new IllegalArgumentException("Tên sản phẩm không được để trống");
-		}
+            throw new IllegalArgumentException(
+                    "Sản phẩm không được null");
+        }
 
-		if (product.getPrice() < 0) {
+        if (product.getName() == null
+                || product.getName().trim().isEmpty()) {
 
-			throw new IllegalArgumentException("Giá sản phẩm không được âm");
-		}
+            throw new IllegalArgumentException(
+                    "Tên sản phẩm không được để trống");
+        }
 
-		if (product.getStock() < 0) {
+        if (product.getPrice() < 0) {
 
-			throw new IllegalArgumentException("Số lượng tồn kho không được âm");
-		}
+            throw new IllegalArgumentException(
+                    "Giá sản phẩm không được âm");
+        }
 
-		if (product.getCategory() == null || product.getCategory().getId() == null) {
+        if (product.getStock() < 0) {
 
-			throw new IllegalArgumentException("Sản phẩm phải thuộc một category");
-		}
+            throw new IllegalArgumentException(
+                    "Số lượng tồn kho không được âm");
+        }
 
-		if (product.getShop() == null || product.getShop().getId() == null) {
+        if (product.getCategory() == null
+                || product.getCategory().getId() == null) {
 
-			throw new IllegalArgumentException("Sản phẩm phải thuộc một shop");
-		}
-	}
+            throw new IllegalArgumentException(
+                    "Sản phẩm phải thuộc một category");
+        }
+
+        if (product.getShop() == null
+                || product.getShop().getId() == null) {
+
+            throw new IllegalArgumentException(
+                    "Sản phẩm phải thuộc một shop");
+        }
+    }
 }

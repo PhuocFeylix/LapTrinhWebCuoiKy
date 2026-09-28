@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="${_csrf.token}">
-<title>Đăng nhập - UTEExpress</title>
+<title>Tài khoản - UTEExpress</title>
 <link
 	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
 	rel="stylesheet">
@@ -38,41 +38,10 @@
 		</div>
 	</nav>
 	<main class="container py-5">
-		<div class="row justify-content-center">
-			<div class="col-md-5">
-				<div class="page-card p-4 p-md-5">
-					<div class="text-center">
-						<i class="bi bi-truck text-primary fs-1"></i>
-						<h2 class="fw-bold">Đăng nhập</h2>
-					</div>
-					<%
-					if ("true".equals(request.getParameter("error"))) {
-					%><div
-						class="alert alert-danger">Sai tài khoản hoặc mật khẩu.</div>
-					<%
-					}
-					%>
-					<%
-					if ("true".equals(request.getParameter("logout"))) {
-					%><div
-						class="alert alert-success">Đăng xuất thành công.</div>
-					<%
-					}
-					%><form action="${pageContext.request.contextPath}/login"
-						method="post">
-						<input type="hidden" name="${_csrf.parameterName}"
-							value="${_csrf.token}"><label class="form-label">Tên
-							đăng nhập</label><input name="username" class="form-control mb-3"
-							required><label class="form-label">Mật khẩu</label><input
-							type="password" name="password" class="form-control mb-3"
-							required>
-						<button class="btn btn-primary w-100">Đăng nhập</button>
-					</form>
-					<div class="text-center mt-3">
-						Chưa có tài khoản? <a href="/register">Đăng ký</a>
-					</div>
-				</div>
-			</div>
+		<div class="page-card p-4">
+			<h2 class="fw-bold">Tài khoản</h2>
+			<p class="text-muted">Thông tin tài khoản của bạn.</p>
+			<div id="content">Đang tải...</div>
 		</div>
 	</main>
 	<footer class="footer">
@@ -84,5 +53,6 @@
 	<script
 		src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 	<script src="${pageContext.request.contextPath}/resources/js/app.js"></script>
+	<script>(async()=>{let u=await UTE.me();document.getElementById('content').innerHTML=u?`<div class="alert alert-success">Xin chào <b>${UTE.esc(u.fullName||u.username)}</b>. API frontend đang sẵn sàng để nối dữ liệu.</div>`:'<div class="alert alert-warning">Vui lòng đăng nhập.</div>'})()</script>
 </body>
 </html>

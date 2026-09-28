@@ -15,228 +15,281 @@ import vn.uteexpress.service.ProductService;
 @RequestMapping("/api/products")
 public class ProductController {
 
-	private final ProductService productService;
-	private final UserRepository userRepository;
+    private final ProductService productService;
+    private final UserRepository userRepository;
+
+    public ProductController(ProductService productService,
+            UserRepository userRepository) {
+
+        this.productService = productService;
+        this.userRepository = userRepository;
+    }
+
+    // =========================
+    // GET ALL - PUBLIC
+    // Chỉ trả sản phẩm active=true
+    // =========================
+
+    @GetMapping
+    public ResponseEntity<Page<Product>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                productService.findAll(page, size));
+    }
+
+    // =========================
+    // GET BY ID - PUBLIC
+    // Chỉ xem sản phẩm active=true
+    // =========================
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getById(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                productService.findPublicById(id));
+    }
+
+    // =========================
+    // SEARCH - PUBLIC
+    // =========================
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<Product>> search(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                productService.search(keyword, page, size));
+    }
+
+    // =========================
+    // GET BY CATEGORY - PUBLIC
+    // =========================
+
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<Page<Product>> getByCategory(
+            @PathVariable Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                productService.findByCategory(
+                        categoryId, page, size));
+    }
+
+    // =========================
+    // GET BY SHOP - PUBLIC
+    // =========================
+
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<Page<Product>> getByShop(
+            @PathVariable Long shopId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                productService.findByShop(
+                        shopId, page, size));
+    }
+
+    // =========================
+    // CREATE
+    // =========================
+
+    @PostMapping
+    public ResponseEntity<Product> create(
+            @RequestBody Product product,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
+
+        // ADMIN / MANAGER có thể tạo Product
+        // cho bất kỳ Shop hợp lệ nào
+        if (isAdminOrManager(currentUser)) {
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(productService.create(product));
+        }
+
+        // VENDOR chỉ được tạo Product
+        // cho Shop của chính mình
+        checkCanManageProduct(product, currentUser);
 
-	public ProductController(ProductService productService, UserRepository userRepository) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(productService.createByVendor(
+                        currentUser.getId(), product));
+    }
 
-		this.productService = productService;
-		this.userRepository = userRepository;
-	}
+    // =========================
+    // UPDATE
+    // =========================
 
-	// =========================
-	// GET ALL
-	// =========================
+    @PutMapping("/{id}")
+    public ResponseEntity<Product> update(
+            @PathVariable Long id,
+            @RequestBody Product product,
+            Authentication authentication) {
 
-	@GetMapping
-	public ResponseEntity<Page<Product>> getAll(@RequestParam(defaultValue = "0") int page,
-			@RequestParam(defaultValue = "10") int size) {
+        User currentUser = getCurrentUser(authentication);
 
-		return ResponseEntity.ok(productService.findAll(page, size));
-	}
+        // ADMIN / MANAGER được cập nhật Product
+        if (isAdminOrManager(currentUser)) {
 
-	// =========================
-	// GET BY ID
-	// =========================
+            return ResponseEntity.ok(
+                    productService.update(id, product));
+        }
 
-	@GetMapping("/{id}")
-	public ResponseEntity<Product> getById(@PathVariable Long id) {
+        // VENDOR chỉ được cập nhật Product
+        // thuộc Shop của mình
+        Product existingProduct = productService.findById(id);
 
-		return ResponseEntity.ok(productService.findById(id));
-	}
+        checkProductOwner(existingProduct, currentUser);
 
-	// =========================
-	// SEARCH
-	// =========================
+        // Không cho Vendor chuyển Product
+        // sang Shop khác
+        if (product.getShop() != null
+                && product.getShop().getId() != null
+                && existingProduct.getShop() != null
+                && !product.getShop().getId()
+                        .equals(existingProduct.getShop().getId())) {
 
-	@GetMapping("/search")
-	public ResponseEntity<Page<Product>> search(@RequestParam(required = false) String keyword,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+            throw new IllegalArgumentException(
+                    "Vendor không được chuyển sản phẩm sang Shop khác");
+        }
 
-		return ResponseEntity.ok(productService.search(keyword, page, size));
-	}
+        return ResponseEntity.ok(
+                productService.updateByVendor(
+                        id, currentUser.getId(), product));
+    }
 
-	// =========================
-	// GET BY CATEGORY
-	// =========================
+    // =========================
+    // DELETE
+    // =========================
 
-	@GetMapping("/category/{categoryId}")
-	public ResponseEntity<Page<Product>> getByCategory(@PathVariable Long categoryId,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            Authentication authentication) {
 
-		return ResponseEntity.ok(productService.findByCategory(categoryId, page, size));
-	}
+        User currentUser = getCurrentUser(authentication);
 
-	// =========================
-	// GET BY SHOP
-	// =========================
+        // ADMIN / MANAGER được xóa Product
+        if (isAdminOrManager(currentUser)) {
 
-	@GetMapping("/shop/{shopId}")
-	public ResponseEntity<Page<Product>> getByShop(@PathVariable Long shopId,
-			@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+            productService.delete(id);
 
-		return ResponseEntity.ok(productService.findByShop(shopId, page, size));
-	}
+            return ResponseEntity.noContent().build();
+        }
 
-	// =========================
-	// CREATE
-	// =========================
+        // VENDOR chỉ được xóa Product
+        // thuộc Shop của mình
+        Product existingProduct = productService.findById(id);
 
-	@PostMapping
-	public ResponseEntity<Product> create(@RequestBody Product product, Authentication authentication) {
+        checkProductOwner(existingProduct, currentUser);
 
-		User currentUser = getCurrentUser(authentication);
+        productService.deleteByVendor(
+                id, currentUser.getId());
 
-		// ADMIN / MANAGER có thể tạo Product
-		// cho bất kỳ Shop hợp lệ nào
-		if (isAdminOrManager(currentUser)) {
+        return ResponseEntity.noContent().build();
+    }
 
-			return ResponseEntity.status(HttpStatus.CREATED).body(productService.create(product));
-		}
+    // =========================
+    // GET CURRENT USER
+    // =========================
 
-		// VENDOR chỉ được tạo Product
-		// cho Shop của chính mình
-		checkCanManageProduct(product, currentUser);
+    private User getCurrentUser(
+            Authentication authentication) {
 
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(productService.createByVendor(currentUser.getId(), product));
-	}
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
 
-	// =========================
-	// UPDATE
-	// =========================
+            throw new IllegalArgumentException(
+                    "Chưa đăng nhập");
+        }
 
-	@PutMapping("/{id}")
-	public ResponseEntity<Product> update(@PathVariable Long id, @RequestBody Product product,
-			Authentication authentication) {
+        return userRepository
+                .findByUsername(authentication.getName())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Không tìm thấy tài khoản"));
+    }
 
-		User currentUser = getCurrentUser(authentication);
+    // =========================
+    // CHECK CREATE PRODUCT
+    // =========================
 
-		// ADMIN / MANAGER được cập nhật Product
-		if (isAdminOrManager(currentUser)) {
+    private void checkCanManageProduct(
+            Product product,
+            User currentUser) {
 
-			return ResponseEntity.ok(productService.update(id, product));
-		}
+        if (isAdminOrManager(currentUser)) {
+            return;
+        }
 
-		// VENDOR chỉ được cập nhật Product
-		// thuộc Shop của mình
-		Product existingProduct = productService.findById(id);
+        if (product == null
+                || product.getShop() == null
+                || product.getShop().getVendor() == null) {
 
-		checkProductOwner(existingProduct, currentUser);
+            throw new IllegalArgumentException(
+                    "Sản phẩm phải thuộc một Shop hợp lệ");
+        }
 
-		// Không cho Vendor chuyển Product
-		// sang Shop khác
-		if (product.getShop() != null && product.getShop().getId() != null && existingProduct.getShop() != null
-				&& !product.getShop().getId().equals(existingProduct.getShop().getId())) {
+        Long vendorId =
+                product.getShop().getVendor().getId();
 
-			throw new IllegalArgumentException("Vendor không được chuyển sản phẩm sang Shop khác");
-		}
+        if (!currentUser.getId().equals(vendorId)) {
 
-		return ResponseEntity.ok(productService.updateByVendor(id, currentUser.getId(), product));
-	}
+            throw new IllegalArgumentException(
+                    "Không được tạo sản phẩm cho Shop của Vendor khác");
+        }
+    }
 
-	// =========================
-	// DELETE
-	// =========================
+    // =========================
+    // CHECK PRODUCT OWNER
+    // =========================
 
-	@DeleteMapping("/{id}")
-	public ResponseEntity<Void> delete(@PathVariable Long id, Authentication authentication) {
+    private void checkProductOwner(
+            Product product,
+            User currentUser) {
 
-		User currentUser = getCurrentUser(authentication);
+        if (isAdminOrManager(currentUser)) {
+            return;
+        }
 
-		// ADMIN / MANAGER được xóa Product
-		if (isAdminOrManager(currentUser)) {
+        if (product == null
+                || product.getShop() == null
+                || product.getShop().getVendor() == null) {
 
-			productService.delete(id);
+            throw new IllegalArgumentException(
+                    "Sản phẩm không thuộc Shop hợp lệ");
+        }
 
-			return ResponseEntity.noContent().build();
-		}
+        Long vendorId =
+                product.getShop().getVendor().getId();
 
-		// VENDOR chỉ được xóa Product
-		// thuộc Shop của mình
-		Product existingProduct = productService.findById(id);
+        if (!currentUser.getId().equals(vendorId)) {
 
-		checkProductOwner(existingProduct, currentUser);
+            throw new IllegalArgumentException(
+                    "Không được thao tác sản phẩm của Vendor khác");
+        }
+    }
 
-		productService.deleteByVendor(id, currentUser.getId());
+    // =========================
+    // CHECK ADMIN / MANAGER
+    // =========================
 
-		return ResponseEntity.noContent().build();
-	}
+    private boolean isAdminOrManager(User user) {
 
-	// =========================
-	// GET CURRENT USER
-	// =========================
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
 
-	private User getCurrentUser(Authentication authentication) {
+        String roleName = user.getRole().getName();
 
-		if (authentication == null || !authentication.isAuthenticated()) {
-
-			throw new IllegalArgumentException("Chưa đăng nhập");
-		}
-
-		return userRepository.findByUsername(authentication.getName())
-				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy tài khoản"));
-	}
-
-	// =========================
-	// CHECK CREATE PRODUCT
-	// =========================
-
-	private void checkCanManageProduct(Product product, User currentUser) {
-
-		if (isAdminOrManager(currentUser)) {
-			return;
-		}
-
-		if (product == null || product.getShop() == null || product.getShop().getVendor() == null) {
-
-			throw new IllegalArgumentException("Sản phẩm phải thuộc một Shop hợp lệ");
-		}
-
-		Long vendorId = product.getShop().getVendor().getId();
-
-		if (!currentUser.getId().equals(vendorId)) {
-
-			throw new IllegalArgumentException("Không được tạo sản phẩm cho Shop của Vendor khác");
-		}
-	}
-
-	// =========================
-	// CHECK PRODUCT OWNER
-	// =========================
-
-	private void checkProductOwner(Product product, User currentUser) {
-
-		if (isAdminOrManager(currentUser)) {
-			return;
-		}
-
-		if (product == null || product.getShop() == null || product.getShop().getVendor() == null) {
-
-			throw new IllegalArgumentException("Sản phẩm không thuộc Shop hợp lệ");
-		}
-
-		Long vendorId = product.getShop().getVendor().getId();
-
-		if (!currentUser.getId().equals(vendorId)) {
-
-			throw new IllegalArgumentException("Không được thao tác sản phẩm của Vendor khác");
-		}
-	}
-
-	// =========================
-	// CHECK ADMIN / MANAGER
-	// =========================
-
-	private boolean isAdminOrManager(User user) {
-
-		if (user == null || user.getRole() == null) {
-
-			return false;
-		}
-
-		String roleName = user.getRole().getName();
-
-		return "ADMIN".equalsIgnoreCase(roleName) || "MANAGER".equalsIgnoreCase(roleName);
-	}
+        return "ADMIN".equalsIgnoreCase(roleName)
+                || "MANAGER".equalsIgnoreCase(roleName);
+    }
 }

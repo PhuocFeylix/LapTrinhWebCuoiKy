@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="${_csrf.token}">
-<title>Đăng nhập - UTEExpress</title>
+<title>Đăng ký - UTEExpress</title>
 <link
 	href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
 	rel="stylesheet">
@@ -39,38 +39,36 @@
 	</nav>
 	<main class="container py-5">
 		<div class="row justify-content-center">
-			<div class="col-md-5">
-				<div class="page-card p-4 p-md-5">
-					<div class="text-center">
-						<i class="bi bi-truck text-primary fs-1"></i>
-						<h2 class="fw-bold">Đăng nhập</h2>
+			<div class="col-lg-6">
+				<div class="page-card p-4">
+					<h2 class="fw-bold text-center">Tạo tài khoản</h2>
+					<div class="alert alert-info">Giao diện đã sẵn sàng. Backend
+						hiện chưa có API đăng ký + OTP.</div>
+					<div class="row g-3">
+						<div class="col-md-6">
+							<label>Username</label><input class="form-control">
+						</div>
+						<div class="col-md-6">
+							<label>Email</label><input class="form-control">
+						</div>
+						<div class="col-md-6">
+							<label>Họ và tên</label><input class="form-control">
+						</div>
+						<div class="col-md-6">
+							<label>Số điện thoại</label><input class="form-control">
+						</div>
+						<div class="col-md-6">
+							<label>Mật khẩu</label><input type="password"
+								class="form-control">
+						</div>
+						<div class="col-md-6">
+							<label>Xác nhận</label><input type="password"
+								class="form-control">
+						</div>
 					</div>
-					<%
-					if ("true".equals(request.getParameter("error"))) {
-					%><div
-						class="alert alert-danger">Sai tài khoản hoặc mật khẩu.</div>
-					<%
-					}
-					%>
-					<%
-					if ("true".equals(request.getParameter("logout"))) {
-					%><div
-						class="alert alert-success">Đăng xuất thành công.</div>
-					<%
-					}
-					%><form action="${pageContext.request.contextPath}/login"
-						method="post">
-						<input type="hidden" name="${_csrf.parameterName}"
-							value="${_csrf.token}"><label class="form-label">Tên
-							đăng nhập</label><input name="username" class="form-control mb-3"
-							required><label class="form-label">Mật khẩu</label><input
-							type="password" name="password" class="form-control mb-3"
-							required>
-						<button class="btn btn-primary w-100">Đăng nhập</button>
-					</form>
-					<div class="text-center mt-3">
-						Chưa có tài khoản? <a href="/register">Đăng ký</a>
-					</div>
+					<button class="btn btn-primary w-100 mt-4"
+						onclick="alert('API đăng ký + OTP chưa có trong backend')">Đăng
+						ký</button>
 				</div>
 			</div>
 		</div>
