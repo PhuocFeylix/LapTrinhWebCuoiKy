@@ -40,7 +40,11 @@ SELECT
     1,
     'UTEExpress Vendor',
     password,
+<<<<<<< HEAD
     '0900000001',
+=======
+    '123456',
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
     'vendor',
     r.id
 FROM users u

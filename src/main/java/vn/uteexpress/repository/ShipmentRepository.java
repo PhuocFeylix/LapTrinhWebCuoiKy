@@ -18,7 +18,11 @@ public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
 
 	List<Shipment> findByShipperIsNullOrderByCreatedAtDesc();
 
+<<<<<<< HEAD
 	Optional<Shipment> findByShopOrderId(Long shopOrderId);
+=======
+	Optional<Shipment> findByShopOrder_Id(Long shopOrderId);
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 
 	List<Shipment> findByShipperIdAndStatusOrderByCreatedAtDesc(Long shipperId, ShipmentStatus status);
 

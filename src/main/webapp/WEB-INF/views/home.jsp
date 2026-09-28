@@ -32,8 +32,69 @@
 					<li class="nav-item"><a class="nav-link" href="/cart">Giỏ
 							hàng</a></li>
 				</ul>
+<<<<<<< HEAD
 				<a class="btn btn-light btn-sm me-2" href="/login">Đăng nhập</a><a
 					class="btn btn-outline-light btn-sm" href="/register">Đăng ký</a>
+=======
+				<%
+				org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+						.getContext().getAuthentication();
+
+				boolean loggedIn = auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal());
+
+				String username = loggedIn ? auth.getName() : null;
+				%>
+
+				<%
+				if (loggedIn) {
+				%>
+
+				<div class="dropdown">
+					<button class="btn btn-light btn-sm dropdown-toggle" type="button"
+						data-bs-toggle="dropdown" aria-expanded="false">
+						👋 Xin chào, <strong><%=username%></strong>
+					</button>
+
+					<ul class="dropdown-menu dropdown-menu-end">
+						<li><a class="dropdown-item" href="/profile"> <i
+								class="bi bi-person me-2"></i> Hồ sơ
+						</a></li>
+
+						<li><a class="dropdown-item" href="/order/history"> <i
+								class="bi bi-receipt me-2"></i> Đơn hàng của tôi
+						</a></li>
+
+						<li>
+							<hr class="dropdown-divider">
+						</li>
+
+						<li>
+							<form action="${pageContext.request.contextPath}/logout"
+								method="post" class="m-0">
+
+								<input type="hidden" name="_csrf" value="${_csrf.token}">
+
+								<button type="submit" class="dropdown-item text-danger">
+									<i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
+								</button>
+							</form>
+						</li>
+					</ul>
+				</div>
+
+				<%
+				} else {
+				%>
+
+				<a class="btn btn-light btn-sm me-2"
+					href="${pageContext.request.contextPath}/login"> Đăng nhập </a> <a
+					class="btn btn-outline-light btn-sm"
+					href="${pageContext.request.contextPath}/register"> Đăng ký </a>
+
+				<%
+				}
+				%>
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 			</div>
 		</div>
 	</nav>

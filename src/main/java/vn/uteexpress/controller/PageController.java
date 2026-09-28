@@ -41,4 +41,27 @@ public class PageController {
     public String register() {
         return "register";
     }
+<<<<<<< HEAD
+=======
+
+    @GetMapping("/tracking")
+    public String tracking() {
+        return "logistics/tracking";
+    }
+
+    @GetMapping("/shipper/dashboard")
+    public String shipperDashboard() {
+        return "shipper/dashboard";
+    }
+
+    @GetMapping("/admin/shipments")
+    public String adminShipments() {
+        return "admin/shipments";
+    }
+
+    @GetMapping("/manager/shipments")
+    public String managerShipments() {
+        return "admin/shipments";
+    }
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 }

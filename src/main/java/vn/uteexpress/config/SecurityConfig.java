@@ -26,7 +26,11 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+<<<<<<< HEAD
 		http.authorizeHttpRequests(auth -> auth
+=======
+		http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/**")).authorizeHttpRequests(auth -> auth
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 				// =========================
 				// PUBLIC SHIPMENT TRACKING
 				// =========================
@@ -48,7 +52,11 @@ public class SecurityConfig {
 				// PUBLIC WEB
 				// =========================
 
+<<<<<<< HEAD
 				.requestMatchers("/", "/login").permitAll()
+=======
+				.requestMatchers("/", "/login", "/tracking").permitAll()
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 
 				// =========================
 				// PUBLIC CATEGORY API

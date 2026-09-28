@@ -2,6 +2,10 @@ package vn.uteexpress.entity;
 
 import java.time.LocalDateTime;
 import jakarta.persistence.*;
+<<<<<<< HEAD
+=======
+import com.fasterxml.jackson.annotation.JsonIgnore;
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 
 @Entity
 @Table(name = "shipments")
@@ -13,6 +17,10 @@ public class Shipment {
 	@Column(nullable = false, unique = true, length = 30)
 	private String trackingCode;
 
+<<<<<<< HEAD
+=======
+	@JsonIgnore
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "order_id", nullable = false)
 	private Order order;
@@ -34,6 +42,10 @@ public class Shipment {
 
 	@Column(length = 500)
 	private String note;
+<<<<<<< HEAD
+=======
+	@JsonIgnore
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "shop_order_id")
 	private ShopOrder shopOrder;
@@ -61,6 +73,23 @@ public class Shipment {
 		this.order = order;
 	}
 
+<<<<<<< HEAD
+=======
+	public Long getOrderId() {
+		return order != null ? order.getId() : null;
+	}
+
+	public Long getShopOrderId() {
+		return shopOrder != null ? shopOrder.getId() : null;
+	}
+
+	public String getShipperName() {
+		if (shipper == null) return null;
+		return shipper.getFullName() != null && !shipper.getFullName().isBlank()
+				? shipper.getFullName() : shipper.getUsername();
+	}
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	public User getShipper() {
 		return shipper;
 	}

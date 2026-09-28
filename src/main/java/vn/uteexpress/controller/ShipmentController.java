@@ -33,7 +33,11 @@ public class ShipmentController {
 
 	// =========================================================
 	// ASSIGN SHIPPER
+<<<<<<< HEAD
 	// ADMIN / MANAGER ONLY
+=======
+	// ADMIN / MANAGER
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	// =========================================================
 
 	@PutMapping("/{shipmentId}/assign/{shipperId}")
@@ -48,6 +52,24 @@ public class ShipmentController {
 	}
 
 	// =========================================================
+<<<<<<< HEAD
+=======
+	// RETRY FAILED SHIPMENT
+	// ADMIN / MANAGER
+	// =========================================================
+
+	@PutMapping("/{shipmentId}/retry")
+	public ResponseEntity<Shipment> retryShipment(@PathVariable Long shipmentId, Authentication authentication) {
+
+		User currentUser = getCurrentUser(authentication);
+
+		checkManagerOrAdmin(currentUser);
+
+		return ResponseEntity.ok(shipmentService.retryFailedShipment(shipmentId));
+	}
+
+	// =========================================================
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	// UPDATE SHIPMENT STATUS
 	// SHIPPER OWNER / ADMIN
 	// =========================================================
@@ -58,7 +80,11 @@ public class ShipmentController {
 
 		User currentUser = getCurrentUser(authentication);
 
+<<<<<<< HEAD
 		checkCanUpdateShipmentStatus(shipmentId, currentUser);
+=======
+		checkCanUpdateShipmentStatus(shipmentId, currentUser, status);
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 
 		return ResponseEntity.ok(shipmentService.updateStatus(shipmentId, status));
 	}
@@ -231,7 +257,11 @@ public class ShipmentController {
 
 		if (!isShipper(currentUser) || !currentUser.getId().equals(shipperId)) {
 
+<<<<<<< HEAD
 			throw new IllegalArgumentException("Không được xem Shipment của Shipper khác");
+=======
+			throw new IllegalArgumentException("Không được truy cập dữ liệu của Shipper khác");
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		}
 	}
 
@@ -239,17 +269,28 @@ public class ShipmentController {
 	// SHIPMENT STATUS ACCESS
 	// =========================================================
 
+<<<<<<< HEAD
 	private void checkCanUpdateShipmentStatus(Long shipmentId, User currentUser) {
 
 		/*
 		 * Admin được xử lý.
+=======
+	private void checkCanUpdateShipmentStatus(Long shipmentId, User currentUser, ShipmentStatus status) {
+
+		/*
+		 * Admin có thể xử lý Shipment.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isAdmin(currentUser)) {
 			return;
 		}
 
 		/*
+<<<<<<< HEAD
 		 * Manager không trực tiếp đổi trạng thái giao hàng.
+=======
+		 * Manager không trực tiếp cập nhật trạng thái giao hàng.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isManager(currentUser)) {
 
@@ -264,6 +305,25 @@ public class ShipmentController {
 			throw new IllegalArgumentException("Chỉ Shipper hoặc Admin được cập nhật trạng thái Shipment");
 		}
 
+<<<<<<< HEAD
+=======
+		/*
+		 * Shipper không được tự CANCELLED.
+		 */
+		if (status == ShipmentStatus.CANCELLED) {
+
+			throw new IllegalArgumentException("Shipper không được tự hủy Shipment");
+		}
+
+		/*
+		 * Shipper không được RETRY.
+		 */
+		if (status == ShipmentStatus.READY) {
+
+			throw new IllegalArgumentException("Shipper không được đưa Shipment về READY");
+		}
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		Shipment shipment = shipmentService.getById(shipmentId);
 
 		if (shipment.getShipper() == null || !shipment.getShipper().getId().equals(currentUser.getId())) {
@@ -297,7 +357,11 @@ public class ShipmentController {
 		}
 
 		/*
+<<<<<<< HEAD
 		 * Vendor chỉ xem Shipment thuộc Shop của mình.
+=======
+		 * Vendor chỉ xem Shipment của Shop mình.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isVendor(currentUser)) {
 
@@ -324,7 +388,11 @@ public class ShipmentController {
 		}
 
 		/*
+<<<<<<< HEAD
 		 * Admin / Manager được xem toàn bộ.
+=======
+		 * Admin / Manager.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isAdmin(currentUser) || isManager(currentUser)) {
 
@@ -332,7 +400,11 @@ public class ShipmentController {
 		}
 
 		/*
+<<<<<<< HEAD
 		 * Shipper chỉ nhận Shipment của chính mình.
+=======
+		 * Shipper.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isShipper(currentUser)) {
 
@@ -348,7 +420,11 @@ public class ShipmentController {
 		}
 
 		/*
+<<<<<<< HEAD
 		 * Vendor chỉ nhận Shipment thuộc Shop của chính mình.
+=======
+		 * Vendor.
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		 */
 		if (isVendor(currentUser)) {
 

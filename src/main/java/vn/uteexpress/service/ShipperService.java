@@ -26,11 +26,25 @@ public class ShipperService {
 		this.shipmentService = shipmentService;
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Lấy Shipper và kiểm tra tài khoản.
 	 */
 	private User findShipper(Long shipperId) {
 
+=======
+	// =========================================================
+	// FIND SHIPPER
+	// =========================================================
+
+	private User findShipper(Long shipperId) {
+
+		if (shipperId == null) {
+
+			throw new IllegalArgumentException("Shipper ID không được null");
+		}
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		User shipper = userRepository.findById(shipperId)
 				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Shipper"));
 
@@ -47,9 +61,16 @@ public class ShipperService {
 		return shipper;
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Lấy toàn bộ Shipment của Shipper.
 	 */
+=======
+	// =========================================================
+	// GET ALL SHIPMENTS
+	// =========================================================
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@Transactional(readOnly = true)
 	public List<Shipment> getShipments(Long shipperId) {
 
@@ -58,11 +79,18 @@ public class ShipperService {
 		return shipmentRepository.findByShipperIdOrderByCreatedAtDesc(shipperId);
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Lấy các Shipment đang được giao cho Shipper.
 	 *
 	 * Bao gồm: ASSIGNED PICKED_UP DELIVERING
 	 */
+=======
+	// =========================================================
+	// GET ACTIVE SHIPMENTS
+	// =========================================================
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@Transactional(readOnly = true)
 	public List<Shipment> getActiveShipments(Long shipperId) {
 
@@ -72,9 +100,16 @@ public class ShipperService {
 				List.of(ShipmentStatus.ASSIGNED, ShipmentStatus.PICKED_UP, ShipmentStatus.DELIVERING));
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Lấy các Shipment đã giao thành công.
 	 */
+=======
+	// =========================================================
+	// GET DELIVERED
+	// =========================================================
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@Transactional(readOnly = true)
 	public List<Shipment> getDeliveredShipments(Long shipperId) {
 
@@ -84,37 +119,80 @@ public class ShipperService {
 				.filter(shipment -> shipment.getStatus() == ShipmentStatus.DELIVERED).toList();
 	}
 
+<<<<<<< HEAD
 	/**
 	 * Shipper cập nhật trạng thái Shipment.
 	 *
 	 * Quan trọng: Shipment phải thuộc đúng Shipper.
 	 */
+=======
+	// =========================================================
+	// GET FAILED
+	// =========================================================
+
+	@Transactional(readOnly = true)
+	public List<Shipment> getFailedShipments(Long shipperId) {
+
+		findShipper(shipperId);
+
+		return shipmentRepository.findByShipperIdOrderByCreatedAtDesc(shipperId).stream()
+				.filter(shipment -> shipment.getStatus() == ShipmentStatus.FAILED).toList();
+	}
+
+	// =========================================================
+	// UPDATE SHIPMENT STATUS
+	// =========================================================
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@Transactional
 	public Shipment updateShipmentStatus(Long shipperId, Long shipmentId, ShipmentStatus newStatus) {
 
 		findShipper(shipperId);
 
+<<<<<<< HEAD
 		Shipment shipment = shipmentRepository.findById(shipmentId)
 				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Shipment"));
 
 		/*
 		 * Kiểm tra Shipment có được giao cho đúng Shipper hay không.
 		 */
+=======
+		if (newStatus == null) {
+
+			throw new IllegalArgumentException("Trạng thái mới không được null");
+		}
+
+		Shipment shipment = shipmentRepository.findById(shipmentId)
+				.orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Shipment"));
+
+		// -----------------------------------------------------
+		// SHIPMENT PHẢI THUỘC SHIPPER
+		// -----------------------------------------------------
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		if (shipment.getShipper() == null || shipment.getShipper().getId() == null
 				|| !shipment.getShipper().getId().equals(shipperId)) {
 
 			throw new IllegalArgumentException("Shipment không thuộc Shipper này");
 		}
 
+<<<<<<< HEAD
 		/*
 		 * Shipper chỉ được cập nhật các trạng thái thuộc quy trình giao hàng.
 		 */
+=======
+		// -----------------------------------------------------
+		// SHIPPER CHỈ ĐƯỢC CẬP NHẬT CÁC TRẠNG THÁI NÀY
+		// -----------------------------------------------------
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 		if (newStatus != ShipmentStatus.PICKED_UP && newStatus != ShipmentStatus.DELIVERING
 				&& newStatus != ShipmentStatus.DELIVERED && newStatus != ShipmentStatus.FAILED) {
 
 			throw new IllegalArgumentException("Shipper không được chuyển Shipment sang trạng thái " + newStatus);
 		}
 
+<<<<<<< HEAD
 		return shipmentService.updateStatus(shipmentId, newStatus);
 	}
 
@@ -124,6 +202,19 @@ public class ShipperService {
 	 * Thực tế Shipment phải được Admin/Manager assign trước, nên hàm này chỉ kiểm
 	 * tra Shipment đã thuộc Shipper.
 	 */
+=======
+		// -----------------------------------------------------
+		// DELEGATE TO SHIPMENT SERVICE
+		// -----------------------------------------------------
+
+		return shipmentService.updateStatus(shipmentId, newStatus);
+	}
+
+	// =========================================================
+	// GET SHIPMENT DETAIL
+	// =========================================================
+
+>>>>>>> 2b622bd (Them 1 vai frontend va khoi tao lai git do xoa nham file)
 	@Transactional(readOnly = true)
 	public Shipment getShipment(Long shipperId, Long shipmentId) {
 
